@@ -4,8 +4,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-contrib/cors"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -25,13 +25,15 @@ func main() {
 	// 创建 Gin 路由
 	r := gin.Default()
 
-	// 配置 CORS
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:3000"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		AllowCredentials: true,
-	}))
+	// 配置 CORS（仅开发环境需要）
+	if os.Getenv("ENV") != "production" {
+		r.Use(cors.New(cors.Config{
+			AllowOrigins:     []string{"http://localhost:5173", "http://localhost:3000"},
+			AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+			AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+			AllowCredentials: true,
+		}))
+	}
 
 	// 健康检查
 	r.GET("/health", func(c *gin.Context) {

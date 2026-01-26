@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:16-alpine
+    container_name: windsong-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-windsong}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-windsong}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - windsong-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U windsong"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Go 后端 API
+  backend:
+    image: ghcr.io/santashen/windsong-backend:latest
+    container_name: windsong-backend
+    restart: always
+    ports:
+      - "127.0.0.1:9080:8080"  # 宿主机 9080 映射到容器 8080
+    environment:
+      PORT: 8080
+      DATABASE_URL: host=postgres user=${DB_USER:-windsong} password=${DB_PASSWORD} dbname=${DB_NAME:-windsong} port=5432 sslmode=disable
+      ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - windsong-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Vue 前端（Nginx 容器）
+  frontend:
+    image: ghcr.io/santashen/windsong-frontend:latest
+    container_name: windsong-frontend
+    restart: always
+    ports:
+      - "127.0.0.1:9081:80"  # 宿主机 9081 映射到容器 80
+    networks:
+      - windsong-network
+
+networks:
+  windsong-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
