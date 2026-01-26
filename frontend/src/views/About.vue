@@ -18,12 +18,13 @@
           <div class="scene-container" ref="sceneContainer"></div>
 
           <!-- Monitoring Panel -->
-          <div class="monitoring-panel">
-            <div class="panel-header">
+          <div class="monitoring-panel" :class="{ collapsed: isPanelCollapsed }">
+            <div class="panel-header" @click="togglePanel">
               <span class="status-dot"></span>
               <span>Flight Test Monitor</span>
+              <span class="toggle-icon">{{ isPanelCollapsed ? '+' : '−' }}</span>
             </div>
-            <div class="panel-body">
+            <div class="panel-body" v-show="!isPanelCollapsed">
               <div class="metric">
                 <span class="label">Altitude</span>
                 <span class="value">{{ metrics.altitude.toLocaleString() }} ft</span>
@@ -49,7 +50,7 @@
                 <span class="value">{{ metrics.dataPackets.toLocaleString() }}/s</span>
               </div>
             </div>
-            <div class="panel-footer">
+            <div class="panel-footer" v-show="!isPanelCollapsed">
               <div class="data-stream">
                 <span v-for="(char, i) in dataStream" :key="i" class="stream-char">{{ char }}</span>
               </div>
@@ -103,6 +104,11 @@ import Footer from '@/components/layout/Footer.vue'
 
 const sceneContainer = ref(null)
 const dataStream = ref('0101001101011001010011')
+const isPanelCollapsed = ref(false)
+
+const togglePanel = () => {
+  isPanelCollapsed.value = !isPanelCollapsed.value
+}
 
 // Avatar image path - change this to your own avatar in public folder
 // e.g., '/avatar.png' or '/images/avatar.jpg'
@@ -547,6 +553,34 @@ onBeforeUnmount(() => {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 1px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s ease;
+}
+
+.panel-header:hover {
+  background: var(--color-border);
+}
+
+.toggle-icon {
+  margin-left: auto;
+  font-size: 14px;
+  font-weight: 400;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.panel-header:hover .toggle-icon {
+  opacity: 1;
+}
+
+.monitoring-panel.collapsed {
+  width: auto;
+  min-width: 180px;
+}
+
+.monitoring-panel.collapsed .panel-header {
+  border-bottom: none;
 }
 
 .status-dot {
@@ -711,6 +745,14 @@ onBeforeUnmount(() => {
     width: 160px;
     top: 10px;
     right: 10px;
+  }
+
+  .monitoring-panel.collapsed {
+    min-width: 140px;
+  }
+
+  .toggle-icon {
+    font-size: 12px;
   }
 
   .panel-header {
