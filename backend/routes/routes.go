@@ -37,6 +37,9 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 	// Initialize handlers
 	photoHandler := handlers.NewPhotoHandler(photoService)
 
+	// Initialize auth handler
+	authHandler := handlers.NewAuthHandler(cfg.AdminAPIKey)
+
 	// API routes
 	api := r.Group("/api")
 	{
@@ -46,6 +49,12 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 				"message": "Hello from Windsong Blog API!",
 			})
 		})
+
+		// Auth routes (public)
+		auth := api.Group("/auth")
+		{
+			auth.POST("/verify", authHandler.Verify)
+		}
 
 		// Photo routes - Public (read-only)
 		api.GET("/photos", photoHandler.GetPhotos)
