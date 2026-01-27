@@ -20,4 +20,22 @@ api.interceptors.response.use(
   error => Promise.reject(error)
 )
 
+// Gallery API
+export const galleryApi = {
+  // Get photos with pagination and filters
+  getPhotos(params = {}) {
+    return api.get('/photos', { params })
+  },
+
+  // Get single photo by ID
+  getPhoto(id) {
+    return api.get(`/photos/${id}`)
+  },
+
+  // Get filter options (years, locations, tags)
+  getFilterOptions() {
+    return api.get('/photos/filters')
+  }
+}
+
 export default api
