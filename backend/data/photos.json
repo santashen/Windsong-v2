@@ -1,0 +1,100 @@
+{
+  "photos": [
+    {
+      "url": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4",
+      "thumbnail": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400",
+      "title": "Alpine Mountains at Sunrise",
+      "description": "Majestic mountain peaks bathed in the golden light of dawn.",
+      "date": "2024-06-15",
+      "location": "Swiss Alps, Switzerland",
+      "city": "Zermatt",
+      "country": "Switzerland",
+      "tags": ["nature", "mountains", "sunrise", "landscape"],
+      "aspectRatio": "landscape"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e",
+      "thumbnail": "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=400",
+      "title": "Traditional Japanese Temple",
+      "description": "A serene temple surrounded by autumn foliage in Kyoto.",
+      "date": "2024-10-20",
+      "location": "Kyoto, Japan",
+      "city": "Kyoto",
+      "country": "Japan",
+      "tags": ["travel", "architecture", "japan", "autumn"],
+      "aspectRatio": "landscape"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d",
+      "thumbnail": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
+      "title": "Ocean Sunset",
+      "description": "The sun setting over calm ocean waters, painting the sky in vibrant colors.",
+      "date": "2024-08-05",
+      "location": "Maldives",
+      "city": "Male",
+      "country": "Maldives",
+      "tags": ["nature", "ocean", "sunset", "travel"],
+      "aspectRatio": "landscape"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05",
+      "thumbnail": "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400",
+      "title": "Misty Forest Valley",
+      "description": "Morning mist rolling through a peaceful forest valley.",
+      "date": "2024-04-12",
+      "location": "Black Forest, Germany",
+      "city": "Freiburg",
+      "country": "Germany",
+      "tags": ["nature", "forest", "landscape", "morning"],
+      "aspectRatio": "landscape"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1519681393784-d120267933ba",
+      "thumbnail": "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400",
+      "title": "Starry Night Over Mountains",
+      "description": "The Milky Way stretching across the night sky above snow-capped peaks.",
+      "date": "2024-01-25",
+      "location": "Canadian Rockies, Canada",
+      "city": "Banff",
+      "country": "Canada",
+      "tags": ["nature", "night", "stars", "mountains"],
+      "aspectRatio": "landscape"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1",
+      "thumbnail": "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=400",
+      "title": "Lakeside Serenity",
+      "description": "A tranquil lake reflecting the surrounding mountains and sky.",
+      "date": "2023-09-18",
+      "location": "Lake Bled, Slovenia",
+      "city": "Bled",
+      "country": "Slovenia",
+      "tags": ["nature", "lake", "travel", "landscape"],
+      "aspectRatio": "landscape"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1502082553048-f009c37129b9",
+      "thumbnail": "https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=400",
+      "title": "Lone Tree at Sunset",
+      "description": "A solitary tree standing against the backdrop of a colorful sunset.",
+      "date": "2023-07-30",
+      "location": "Tuscany, Italy",
+      "city": "Siena",
+      "country": "Italy",
+      "tags": ["nature", "sunset", "landscape", "minimalist"],
+      "aspectRatio": "landscape"
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1469474968028-56623f02e42e",
+      "thumbnail": "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400",
+      "title": "Mountain Road Adventure",
+      "description": "Winding road through dramatic mountain scenery.",
+      "date": "2023-05-22",
+      "location": "Dolomites, Italy",
+      "city": "Cortina d'Ampezzo",
+      "country": "Italy",
+      "tags": ["travel", "mountains", "road", "adventure"],
+      "aspectRatio": "landscape"
+    }
+  ]
+}
