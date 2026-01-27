@@ -80,7 +80,7 @@ jobs:
           port: ${{ secrets.SERVER_PORT || 22 }}
           script_stop: true
           # 【修复2】在这里列出变量名，使用大写更规范（GHCR_TOKEN, GHCR_USER）
-          envs: DB_USER,DB_PASSWORD,DB_NAME,GHCR_TOKEN,GHCR_USER
+          envs: DB_USER,DB_PASSWORD,DB_NAME,GHCR_TOKEN,GHCR_USER,ADMIN_API_KEY
           script: |
             cd /data/web-dockers/Windsong-v2
 
@@ -92,6 +92,7 @@ jobs:
             echo "DB_USER=$DB_USER" > .env
             echo "DB_PASSWORD=$DB_PASSWORD" >> .env
             echo "DB_NAME=$DB_NAME" >> .env
+            echo "ADMIN_API_KEY=$ADMIN_API_KEY" >> .env
             chmod 600 .env
 
             # 【修复3】使用传入的环境变量进行登录，确保变量加双引号
@@ -116,3 +117,4 @@ jobs:
           # 【修复4】将 Token 和 用户名 映射到环境变量
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
+          ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
