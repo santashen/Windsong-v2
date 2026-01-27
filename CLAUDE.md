@@ -45,6 +45,10 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ### Frontend (`frontend/src/`)
 - Vue 3 + Vite + Vue Router + Pinia
+- **Prefer Vue 3 Composition API style**:
+  - Components: Use `<script setup>` syntax
+  - Pinia stores: Use Setup Store syntax (function with `ref`, `computed`, return object)
+  - Avoid Options API unless necessary for compatibility
 - `@` alias resolves to `src/` directory
 - API requests go to `/api` (proxied to backend:8080 in dev via Vite config)
 - Components: `components/layout/` for Header/Footer

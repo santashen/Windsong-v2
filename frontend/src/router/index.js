@@ -3,6 +3,11 @@ import Home from '@/views/Home.vue'
 import About from '@/views/About.vue'
 import Gallery from '@/views/Gallery.vue'
 
+// Admin views (lazy loaded)
+const AdminLayout = () => import('@/views/admin/AdminLayout.vue')
+const AdminLogin = () => import('@/views/admin/Login.vue')
+const AdminPhotos = () => import('@/views/admin/Photos.vue')
+
 const routes = [
   {
     path: '/',
@@ -18,12 +23,69 @@ const routes = [
     path: '/about',
     name: 'About',
     component: About
+  },
+  // Admin routes
+  {
+    path: '/admin/login',
+    name: 'AdminLogin',
+    component: AdminLogin,
+    meta: { requiresGuest: true }
+  },
+  {
+    path: '/admin',
+    component: AdminLayout,
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        redirect: '/admin/photos'
+      },
+      {
+        path: 'photos',
+        name: 'AdminPhotos',
+        component: AdminPhotos
+      }
+      // Future admin routes can be added here
+    ]
   }
 ]
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes
+})
+
+// Navigation guards
+router.beforeEach(async (to, from, next) => {
+  // Lazy import to avoid circular dependency
+  const { useAuthStore } = await import('@/stores/auth')
+  const authStore = useAuthStore()
+
+  // Initialize auth on first navigation if we have a stored key
+  if (authStore.hasStoredKey && !authStore.isAuthenticated && !authStore.isLoading) {
+    await authStore.initAuth()
+  }
+
+  // Check if route requires authentication
+  if (to.matched.some(record => record.meta.requiresAuth)) {
+    if (!authStore.isAuthenticated) {
+      next({
+        path: '/admin/login',
+        query: { redirect: to.fullPath }
+      })
+      return
+    }
+  }
+
+  // Check if route requires guest (login page - redirect if already logged in)
+  if (to.matched.some(record => record.meta.requiresGuest)) {
+    if (authStore.isAuthenticated) {
+      next('/admin')
+      return
+    }
+  }
+
+  next()
 })
 
 export default router
