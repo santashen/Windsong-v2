@@ -19,6 +19,9 @@
           <p class="gallery-subtitle">Moments captured through the lens</p>
         </section>
 
+        <!-- Filters -->
+        <GalleryFilter />
+
         <!-- Loading state -->
         <div class="gallery-loading" v-if="store.isLoading && store.photos.length === 0">
           <div class="loading-grid">
@@ -47,9 +50,15 @@
             @click="store.openLightbox(photo)"
           />
         </section>
+
+        <!-- Pagination -->
+        <GalleryPagination />
       </div>
     </main>
     <Footer />
+
+    <!-- Lightbox -->
+    <GalleryLightbox />
   </div>
 </template>
 
@@ -58,6 +67,9 @@ import { onMounted } from 'vue'
 import Header from '@/components/layout/Header.vue'
 import Footer from '@/components/layout/Footer.vue'
 import GalleryCard from '@/components/gallery/GalleryCard.vue'
+import GalleryFilter from '@/components/gallery/GalleryFilter.vue'
+import GalleryPagination from '@/components/gallery/GalleryPagination.vue'
+import GalleryLightbox from '@/components/gallery/GalleryLightbox.vue'
 import { useGalleryStore } from '@/stores/gallery'
 
 const store = useGalleryStore()
