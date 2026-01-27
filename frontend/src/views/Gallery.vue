@@ -38,18 +38,37 @@
 
         <!-- Empty state -->
         <div class="gallery-empty" v-else-if="!store.isLoading && store.photos.length === 0">
-          <p>No photos found.</p>
+          <div class="empty-icon">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+              <polyline points="21 15 16 10 5 21"></polyline>
+            </svg>
+          </div>
+          <p class="empty-text">No photos found</p>
+          <p class="empty-hint" v-if="store.hasActiveFilters">
+            Try adjusting your filters or <button class="empty-clear" @click="store.clearFilters()">clear all filters</button>
+          </p>
         </div>
 
-        <!-- Photo grid -->
-        <section class="gallery-grid" v-else>
-          <GalleryCard
-            v-for="photo in store.photos"
-            :key="photo.id"
-            :photo="photo"
-            @click="store.openLightbox(photo)"
-          />
-        </section>
+        <!-- Photo grid with loading overlay -->
+        <div class="gallery-content" v-else>
+          <Transition name="fade">
+            <div class="loading-overlay" v-if="store.isLoading">
+              <div class="loading-spinner"></div>
+            </div>
+          </Transition>
+          <section class="gallery-grid">
+            <TransitionGroup name="card">
+              <GalleryCard
+                v-for="photo in store.photos"
+                :key="photo.id"
+                :photo="photo"
+                @click="store.openLightbox(photo)"
+              />
+            </TransitionGroup>
+          </section>
+        </div>
 
         <!-- Pagination -->
         <GalleryPagination />
@@ -317,8 +336,94 @@ onMounted(() => {
 .gallery-empty {
   text-align: center;
   padding: 4rem 0;
+}
+
+.empty-icon {
   color: var(--color-text-secondary);
-  font-size: 1.1rem;
+  opacity: 0.4;
+  margin-bottom: 1rem;
+}
+
+.empty-text {
+  font-size: 1.2rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.empty-hint {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  opacity: 0.8;
+}
+
+.empty-clear {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.empty-clear:hover {
+  color: var(--color-primary-hover);
+}
+
+/* Gallery content wrapper */
+.gallery-content {
+  position: relative;
+  min-height: 200px;
+}
+
+/* Loading overlay */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: var(--aero-border-radius);
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--aero-glass-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.card-enter-active {
+  transition: all 0.3s ease;
+}
+
+.card-enter-from {
+  opacity: 0;
+  transform: translateY(20px);
 }
 
 /* Responsive */
