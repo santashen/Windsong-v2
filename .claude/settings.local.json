@@ -7,7 +7,11 @@
       "Bash(git reset:*)",
       "Bash(tree:*)",
       "Bash(npm install:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(go build:*)",
+      "Bash(npm run build:*)",
+      "Bash(git log:*)",
+      "Bash(gh pr create:*)"
     ]
   }
 }
