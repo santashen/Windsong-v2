@@ -33,7 +33,9 @@ services:
       ENV: production
       ADMIN_API_KEY: ${ADMIN_API_KEY}
       POSTS_REPO_URL: ${POSTS_REPO_URL}
-      POSTS_DIR: ${POSTS_DIR}
+      POSTS_DIR: /root/data/posts
+    volumes:
+      - posts_data:/root/data/posts
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,3 +63,4 @@ networks:
 
 volumes:
   postgres_data:
+  posts_data:
