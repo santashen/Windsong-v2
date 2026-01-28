@@ -2,6 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Home from '@/views/Home.vue'
 import About from '@/views/About.vue'
 import Gallery from '@/views/Gallery.vue'
+import BlogList from '@/views/BlogList.vue'
+import BlogPost from '@/views/BlogPost.vue'
 
 // Admin views (lazy loaded)
 const AdminLayout = () => import('@/views/admin/AdminLayout.vue')
@@ -18,6 +20,16 @@ const routes = [
     path: '/gallery',
     name: 'Gallery',
     component: Gallery
+  },
+  {
+    path: '/posts',
+    name: 'BlogList',
+    component: BlogList
+  },
+  {
+    path: '/posts/:slug',
+    name: 'BlogPost',
+    component: BlogPost
   },
   {
     path: '/about',
