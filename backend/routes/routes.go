@@ -33,9 +33,11 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 
 	// Initialize services
 	photoService := services.NewPhotoService(database.GetDB())
+	postService := services.NewPostService(database.GetDB(), cfg.PostsRepoURL, cfg.PostsDir)
 
 	// Initialize handlers
 	photoHandler := handlers.NewPhotoHandler(photoService)
+	postHandler := handlers.NewPostHandler(postService)
 
 	// Initialize auth handler
 	authHandler := handlers.NewAuthHandler(cfg.AdminAPIKey)
@@ -68,6 +70,17 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 			adminPhotos.POST("", photoHandler.CreatePhoto)
 			adminPhotos.PUT("/:id", photoHandler.UpdatePhoto)
 			adminPhotos.DELETE("/:id", photoHandler.DeletePhoto)
+		}
+
+		// Post routes - Public (read-only)
+		api.GET("/posts", postHandler.GetPosts)
+		api.GET("/posts/:slug", postHandler.GetPost)
+
+		// Webhook routes - Protected (require API key)
+		webhooks := api.Group("/webhooks")
+		webhooks.Use(middleware.AdminAuth(cfg.AdminAPIKey))
+		{
+			webhooks.POST("/sync", postHandler.SyncPosts)
 		}
 	}
 }

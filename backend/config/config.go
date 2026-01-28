@@ -8,10 +8,12 @@ import (
 
 // Config holds all configuration for the application
 type Config struct {
-	DatabaseURL string
-	Port        string
-	Env         string
-	AdminAPIKey string // API Key for admin operations
+	DatabaseURL  string
+	Port         string
+	Env          string
+	AdminAPIKey  string // API Key for admin operations
+	PostsRepoURL string // Git repository URL for markdown posts
+	PostsDir     string // Local directory to clone/store posts
 }
 
 // Load loads configuration from environment variables
@@ -20,10 +22,12 @@ func Load() *Config {
 	_ = godotenv.Load()
 
 	return &Config{
-		DatabaseURL: getEnv("DATABASE_URL", "host=localhost user=windsong password=windsong123 dbname=windsong port=5432 sslmode=disable"),
-		Port:        getEnv("PORT", "8080"),
-		Env:         getEnv("ENV", "development"),
-		AdminAPIKey: getEnv("ADMIN_API_KEY", ""), // Set this in production!
+		DatabaseURL:  getEnv("DATABASE_URL", "host=localhost user=windsong password=windsong123 dbname=windsong port=5432 sslmode=disable"),
+		Port:         getEnv("PORT", "8080"),
+		Env:          getEnv("ENV", "development"),
+		AdminAPIKey:  getEnv("ADMIN_API_KEY", ""), // Set this in production!
+		PostsRepoURL: getEnv("POSTS_REPO_URL", ""),
+		PostsDir:     getEnv("POSTS_DIR", "./data/posts"),
 	}
 }
 

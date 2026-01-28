@@ -38,4 +38,17 @@ export const galleryApi = {
   }
 }
 
+// Posts API
+export const postsApi = {
+  // Get posts with pagination and tag filter
+  getPosts(params = {}) {
+    return api.get('/posts', { params })
+  },
+
+  // Get single post by slug
+  getPost(slug) {
+    return api.get(`/posts/${slug}`)
+  }
+}
+
 export default api
