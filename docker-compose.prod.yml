@@ -32,6 +32,8 @@ services:
       DATABASE_URL: host=postgres user=${DB_USER:-windsong} password=${DB_PASSWORD} dbname=${DB_NAME:-windsong} port=5432 sslmode=disable
       ENV: production
       ADMIN_API_KEY: ${ADMIN_API_KEY}
+      POSTS_REPO_URL: ${POSTS_REPO_URL}
+      POSTS_DIR: ${POSTS_DIR}
     depends_on:
       postgres:
         condition: service_healthy
