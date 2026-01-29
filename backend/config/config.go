@@ -14,6 +14,7 @@ type Config struct {
 	AdminAPIKey  string // API Key for admin operations
 	PostsRepoURL string // Git repository URL for markdown posts
 	PostsDir     string // Local directory to clone/store posts
+	AIServiceURL string // AI service URL for gold analysis
 }
 
 // Load loads configuration from environment variables
@@ -28,6 +29,7 @@ func Load() *Config {
 		AdminAPIKey:  getEnv("ADMIN_API_KEY", ""), // Set this in production!
 		PostsRepoURL: getEnv("POSTS_REPO_URL", ""),
 		PostsDir:     getEnv("POSTS_DIR", "./data/posts"),
+		AIServiceURL: getEnv("AI_SERVICE_URL", "http://localhost:8000"),
 	}
 }
 
