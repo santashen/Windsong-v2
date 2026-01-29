@@ -49,6 +49,19 @@ services:
     networks:
       - windsong-test
 
+  # Python AI 服务（本地构建）
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: windsong-ai-service-test
+    environment:
+      LLM_API_URL: ${LLM_API_URL:-https://api.aaai.vip}
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_MODEL: ${LLM_MODEL:-deepseek-r1-search}
+    networks:
+      - windsong-test
+
   # 模拟全局 Nginx（可选，用于完整测试）
   nginx:
     image: nginx:alpine

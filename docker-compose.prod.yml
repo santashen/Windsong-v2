@@ -57,6 +57,23 @@ services:
     networks:
       - windsong-network
 
+  # Python AI 服务
+  ai-service:
+    image: ghcr.io/santashen/windsong-ai-service:latest
+    container_name: windsong-ai-service
+    restart: always
+    environment:
+      LLM_API_URL: ${LLM_API_URL:-https://api.aaai.vip}
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_MODEL: ${LLM_MODEL:-deepseek-r1-search}
+    networks:
+      - windsong-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 networks:
   windsong-network:
     driver: bridge

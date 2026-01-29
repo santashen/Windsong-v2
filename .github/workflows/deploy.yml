@@ -11,6 +11,7 @@ env:
   REGISTRY: ghcr.io
   BACKEND_IMAGE: windsong-backend
   FRONTEND_IMAGE: windsong-frontend
+  AI_SERVICE_IMAGE: windsong-ai-service
 
 jobs:
   build:
@@ -57,6 +58,18 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # 构建并推送 AI 服务镜像
+      - name: Build and push ai-service image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./ai-service
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/santashen/${{ env.AI_SERVICE_IMAGE }}:latest
+            ${{ env.REGISTRY }}/santashen/${{ env.AI_SERVICE_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
@@ -80,7 +93,7 @@ jobs:
           port: ${{ secrets.SERVER_PORT || 22 }}
           script_stop: true
           # 【修复2】在这里列出变量名，使用大写更规范（GHCR_TOKEN, GHCR_USER）
-          envs: DB_USER,DB_PASSWORD,DB_NAME,GHCR_TOKEN,GHCR_USER,ADMIN_API_KEY,POSTS_REPO_URL
+          envs: DB_USER,DB_PASSWORD,DB_NAME,GHCR_TOKEN,GHCR_USER,ADMIN_API_KEY,POSTS_REPO_URL,LLM_API_URL,LLM_API_KEY,LLM_MODEL
           script: |
             cd /data/web-dockers/Windsong-v2
 
@@ -94,6 +107,9 @@ jobs:
             echo "DB_NAME=$DB_NAME" >> .env
             echo "ADMIN_API_KEY=$ADMIN_API_KEY" >> .env
             echo "POSTS_REPO_URL=$POSTS_REPO_URL" >> .env
+            echo "LLM_API_URL=$LLM_API_URL" >> .env
+            echo "LLM_API_KEY=$LLM_API_KEY" >> .env
+            echo "LLM_MODEL=$LLM_MODEL" >> .env
             chmod 600 .env
 
             # 【修复3】使用传入的环境变量进行登录，确保变量加双引号
@@ -104,6 +120,7 @@ jobs:
             # 拉取镜像 (使用小写的用户名，因为 Docker 镜像名必须小写)
             docker pull ghcr.io/santashen/windsong-backend:latest
             docker pull ghcr.io/santashen/windsong-frontend:latest
+            docker pull ghcr.io/santashen/windsong-ai-service:latest
 
             # 重启容器
             docker-compose -f docker-compose.prod.yml down
@@ -120,3 +137,6 @@ jobs:
           GHCR_USER: ${{ github.actor }}
           ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
           POSTS_REPO_URL: ${{ secrets.POSTS_REPO_URL }}
+          LLM_API_URL: ${{ secrets.LLM_API_URL }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
