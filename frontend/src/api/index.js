@@ -51,4 +51,12 @@ export const postsApi = {
   }
 }
 
+// Gold Analysis API
+export const goldApi = {
+  // Get today's gold analysis
+  getTodayAnalysis() {
+    return api.get('/gold/today', { timeout: 180000 }) // 3 min timeout for LLM
+  }
+}
+
 export default api

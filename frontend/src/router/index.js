@@ -4,6 +4,8 @@ import About from '@/views/About.vue'
 import Gallery from '@/views/Gallery.vue'
 import BlogList from '@/views/BlogList.vue'
 import BlogPost from '@/views/BlogPost.vue'
+import Services from '@/views/Services.vue'
+import GoldAnalysis from '@/views/GoldAnalysis.vue'
 
 // Admin views (lazy loaded)
 const AdminLayout = () => import('@/views/admin/AdminLayout.vue')
@@ -35,6 +37,16 @@ const routes = [
     path: '/about',
     name: 'About',
     component: About
+  },
+  {
+    path: '/services',
+    name: 'Services',
+    component: Services
+  },
+  {
+    path: '/gold',
+    name: 'GoldAnalysis',
+    component: GoldAnalysis
   },
   // Admin routes
   {
