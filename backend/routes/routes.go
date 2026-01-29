@@ -34,10 +34,12 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 	// Initialize services
 	photoService := services.NewPhotoService(database.GetDB())
 	postService := services.NewPostService(database.GetDB(), cfg.PostsRepoURL, cfg.PostsDir)
+	goldAnalysisService := services.NewGoldAnalysisService(database.GetDB(), cfg.AIServiceURL)
 
 	// Initialize handlers
 	photoHandler := handlers.NewPhotoHandler(photoService)
 	postHandler := handlers.NewPostHandler(postService)
+	goldAnalysisHandler := handlers.NewGoldAnalysisHandler(goldAnalysisService)
 
 	// Initialize auth handler
 	authHandler := handlers.NewAuthHandler(cfg.AdminAPIKey)
@@ -82,5 +84,8 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 		{
 			webhooks.POST("/sync", postHandler.SyncPosts)
 		}
+
+		// Gold Analysis routes - Public
+		api.GET("/gold/today", goldAnalysisHandler.GetTodayAnalysis)
 	}
 }

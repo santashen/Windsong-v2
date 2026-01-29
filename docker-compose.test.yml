@@ -32,6 +32,7 @@ services:
       DATABASE_URL: host=postgres user=windsong password=windsong123 dbname=windsong port=5432 sslmode=disable
       ENV: production
       ADMIN_API_KEY: ${ADMIN_API_KEY:-test-admin-key}
+      AI_SERVICE_URL: http://ai-service:8000
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,6 +47,19 @@ services:
     container_name: windsong-frontend-test
     ports:
       - "127.0.0.1:9081:80"
+    networks:
+      - windsong-test
+
+  # Python AI 服务（本地构建）
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: windsong-ai-service-test
+    environment:
+      LLM_API_URL: ${LLM_API_URL:-https://api.aaai.vip}
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_MODEL: ${LLM_MODEL:-deepseek-r1-search}
     networks:
       - windsong-test
 

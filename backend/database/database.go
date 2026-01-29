@@ -27,7 +27,7 @@ func Init(cfg *config.Config) {
 
 // migrate runs database migrations
 func migrate() {
-	err := DB.AutoMigrate(&models.Photo{}, &models.Post{})
+	err := DB.AutoMigrate(&models.Photo{}, &models.Post{}, &models.GoldAnalysis{})
 	if err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}
