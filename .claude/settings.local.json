@@ -15,7 +15,8 @@
       "Bash(go get:*)",
       "Skill(network-proxy)",
       "Bash(HTTP_PROXY=http://127.0.0.1:7890 HTTPS_PROXY=http://127.0.0.1:7890 go get:*)",
-      "Bash(HTTP_PROXY=http://127.0.0.1:7890 HTTPS_PROXY=http://127.0.0.1:7890 npm install:*)"
+      "Bash(HTTP_PROXY=http://127.0.0.1:7890 HTTPS_PROXY=http://127.0.0.1:7890 npm install:*)",
+      "WebFetch(domain:api-gpt-ge.apifox.cn)"
     ]
   }
 }
