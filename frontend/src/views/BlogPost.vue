@@ -60,6 +60,8 @@
 import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { marked } from 'marked'
+import katex from 'katex'
+import 'katex/dist/katex.min.css'
 import Header from '@/components/layout/Header.vue'
 import Footer from '@/components/layout/Footer.vue'
 import { useBlogStore } from '@/stores/blog'
@@ -74,9 +76,37 @@ marked.setOptions({
   gfm: true
 })
 
+// LaTeX rendering utilities
+function renderLatexInHtml(html) {
+  let result = html
+
+  // Render block-level formulas ($$...$$)
+  result = result.replace(/\$\$([^\$]+)\$\$/g, (match, latex) => {
+    try {
+      return katex.renderToString(latex, { displayMode: true })
+    } catch (e) {
+      console.error('KaTeX rendering error:', e)
+      return match
+    }
+  })
+
+  // Render inline formulas ($...$)
+  result = result.replace(/\$([^\$]+)\$/g, (match, latex) => {
+    try {
+      return katex.renderToString(latex, { displayMode: false })
+    } catch (e) {
+      console.error('KaTeX rendering error:', e)
+      return match
+    }
+  })
+
+  return result
+}
+
 const renderedContent = computed(() => {
   if (!store.currentPost?.content) return ''
-  return marked(store.currentPost.content)
+  const html = marked(store.currentPost.content)
+  return renderLatexInHtml(html)
 })
 
 function formatDate(dateStr) {
@@ -261,6 +291,16 @@ watch(() => route.params.slug, (newSlug) => {
   color: #334155;
   line-height: 1.8;
   font-size: 1.05rem;
+}
+
+/* KaTeX formula styling */
+.post-content :deep(.katex) {
+  font-size: 1.1em;
+}
+
+.post-content :deep(.katex-display) {
+  margin: 1rem 0;
+  padding: 0.5rem 0;
 }
 
 .post-content :deep(h1),
