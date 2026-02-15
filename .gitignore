@@ -3,6 +3,7 @@
 .idea/
 *.swp
 *.swo
+* text=auto
 
 # OS
 .DS_Store
