@@ -39,6 +39,20 @@
               <span class="card-arrow">→</span>
             </div>
           </router-link>
+
+          <!-- Finance Data Card -->
+          <router-link to="/finance" class="service-card">
+            <div class="card-icon">📈</div>
+            <h2 class="card-title">Finance Data</h2>
+            <p class="card-description">
+              Search and compare stocks & funds. View historical trends
+              with customizable time ranges and financial indicators.
+            </p>
+            <div class="card-footer">
+              <span class="card-tag">💹 Data Viewer</span>
+              <span class="card-arrow">→</span>
+            </div>
+          </router-link>
         </div>
       </div>
     </main>

@@ -59,4 +59,21 @@ export const goldApi = {
   }
 }
 
+// AI Service API (direct to Python ai-service)
+const aiApi = axios.create({
+  baseURL: '/ai-api',
+  timeout: 30000,
+  headers: { 'Content-Type': 'application/json' }
+})
+
+// Finance Data API
+export const financeApi = {
+  search(keyword) {
+    return aiApi.get('/finance/search', { params: { keyword } })
+  },
+  getHistory(params) {
+    return aiApi.get('/finance/history', { params })
+  }
+}
+
 export default api
