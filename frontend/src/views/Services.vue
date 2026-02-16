@@ -26,17 +26,33 @@
             </div>
           </router-link>
 
-          <!-- More services can be added here -->
-          <div class="service-card coming-soon">
-            <div class="card-icon">🚀</div>
-            <h2 class="card-title">More Coming Soon</h2>
+          <!-- Real-time Monitor Card -->
+          <router-link to="/monitor" class="service-card">
+            <div class="card-icon">📡</div>
+            <h2 class="card-title">Real-time Monitor</h2>
             <p class="card-description">
-              We're working on more AI-powered services. Stay tuned for updates!
+              Configure and simulate real-time data monitoring dashboards
+              with customizable charts and mock data streams.
             </p>
             <div class="card-footer">
-              <span class="card-tag">⏳ In Development</span>
+              <span class="card-tag">📈 Simulation</span>
+              <span class="card-arrow">→</span>
             </div>
-          </div>
+          </router-link>
+
+          <!-- Finance Data Card -->
+          <router-link to="/finance" class="service-card">
+            <div class="card-icon">📈</div>
+            <h2 class="card-title">Finance Data</h2>
+            <p class="card-description">
+              Search and compare stocks & funds. View historical trends
+              with customizable time ranges and financial indicators.
+            </p>
+            <div class="card-footer">
+              <span class="card-tag">💹 Data Viewer</span>
+              <span class="card-arrow">→</span>
+            </div>
+          </router-link>
         </div>
       </div>
     </main>
@@ -111,17 +127,6 @@ import Footer from '@/components/layout/Footer.vue'
   border-color: var(--color-primary);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transform: translateY(-2px);
-}
-
-.service-card.coming-soon {
-  opacity: 0.7;
-  cursor: default;
-}
-
-.service-card.coming-soon:hover {
-  border-color: var(--color-border);
-  box-shadow: none;
-  transform: none;
 }
 
 .card-icon {

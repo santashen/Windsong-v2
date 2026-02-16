@@ -6,6 +6,8 @@ import BlogList from '@/views/BlogList.vue'
 import BlogPost from '@/views/BlogPost.vue'
 import Services from '@/views/Services.vue'
 import GoldAnalysis from '@/views/GoldAnalysis.vue'
+import Monitor from '@/views/Monitor.vue'
+import FinanceView from '@/views/FinanceView.vue'
 
 // Admin views (lazy loaded)
 const AdminLayout = () => import('@/views/admin/AdminLayout.vue')
@@ -47,6 +49,16 @@ const routes = [
     path: '/gold',
     name: 'GoldAnalysis',
     component: GoldAnalysis
+  },
+  {
+    path: '/monitor',
+    name: 'Monitor',
+    component: Monitor
+  },
+  {
+    path: '/finance',
+    name: 'Finance',
+    component: FinanceView
   },
   // Admin routes
   {
