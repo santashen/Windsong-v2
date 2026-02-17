@@ -19,6 +19,25 @@ services:
       timeout: 5s
       retries: 5
 
+  # Flyway 数据库迁移
+  flyway:
+    image: flyway/flyway:10
+    container_name: windsong-flyway-test
+    command: migrate
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/windsong
+      FLYWAY_USER: windsong
+      FLYWAY_PASSWORD: windsong123
+      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      FLYWAY_BASELINE_VERSION: "1"
+    volumes:
+      - ./db/migrations:/flyway/sql:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - windsong-test
+
   # Go 后端 API（本地构建）
   backend:
     build:
@@ -36,6 +55,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
     networks:
       - windsong-test
 
