@@ -121,10 +121,11 @@ jobs:
             docker pull ghcr.io/santashen/windsong-backend:latest
             docker pull ghcr.io/santashen/windsong-frontend:latest
             docker pull ghcr.io/santashen/windsong-ai-service:latest
+            docker pull flyway/flyway:10
 
             # 重启容器
-            docker-compose -f docker-compose.prod.yml down
-            docker-compose -f docker-compose.prod.yml up -d
+            docker compose -f docker-compose.prod.yml down
+            docker compose -f docker-compose.prod.yml up -d
 
             docker image prune -f
             echo "Deployment completed!"
