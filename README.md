@@ -196,6 +196,30 @@ echo $GITHUB_TOKEN | docker login ghcr.io -u <username> --password-stdin
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
+## 开发计划
+
+### API 规范化
+- [ ] 统一响应格式 `{ code, message, data }`，统一错误码体系
+- [ ] `swaggo/swag` 自动生成 OpenAPI 文档，Swagger UI 挂载到 `/swagger/`
+- [ ] 请求参数校验：`go-playground/validator` + binding tags
+- [ ] API 版本化：`/api/v1/`
+
+### 测试体系
+- [ ] 后端单元测试：`testing` + `testify`，覆盖 services 层核心逻辑
+- [ ] 后端接口测试：`httptest` + Gin 测试模式，覆盖 handlers 层
+- [ ] 测试数据库：`testcontainers-go` 启动临时 PostgreSQL
+- [ ] 前端组件测试：Vitest + `@vue/test-utils`
+- [ ] 前端 E2E 测试：Playwright 覆盖核心用户流程
+- [ ] CI 集成：GitHub Actions 加入测试步骤，PR 必须测试通过
+- [ ] 代码覆盖率报告
+
+### 结构化日志
+- [ ] 后端引入 `zerolog` 或 `zap`，JSON 格式输出
+- [ ] 请求日志中间件：记录 request_id、method、path、status、latency
+- [ ] 请求链路追踪：中间件注入 request_id 贯穿整个请求生命周期
+- [ ] 分级日志：debug / info / warn / error
+- [ ] AI Service (Python) 引入 `structlog` 保持日志格式一致
+
 ## License
 
 MIT
