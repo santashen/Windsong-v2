@@ -21,6 +21,11 @@ func main() {
 	// Load configuration
 	cfg := config.Load()
 
+	// Set Gin mode based on production flag
+	if cfg.IsProduction() {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	// Initialize database
 	database.Init(cfg)
 
