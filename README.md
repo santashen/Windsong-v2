@@ -1,92 +1,135 @@
 # Windsong Blog
 
-一个基于 Go + Vue 3 + PostgreSQL 的个人博客系统，支持 Docker 容器化部署和 GitHub Actions 自动化 CI/CD。
+一个基于 Go + Vue 3 + Python + PostgreSQL 的个人博客系统，支持 Docker 容器化部署和 GitHub Actions 自动化 CI/CD。
+
+## 功能特性
+
+- 博客系统 - 基于 Git 仓库同步的 Markdown 文章，支持 LaTeX 公式渲染
+- 相册管理 - 照片展览与后台管理
+- 黄金分析 - AI 驱动的黄金市场分析
+- 财经数据 - 股票/基金历史数据对比查看
+- 实时监控 - 数据可视化监控面板
+- 管理后台 - API Key 认证的后台管理系统
 
 ## 项目结构
 
 ```
 Windsong-v2/
-├── backend/              # Go 后端
+├── backend/              # Go 后端 API
 │   ├── main.go           # 入口文件
-│   ├── Dockerfile        # 后端镜像构建
-│   ├── go.mod            # Go 模块依赖
-│   └── .env.example      # 环境变量示例
+│   ├── config/           # 环境配置
+│   ├── database/         # 数据库连接
+│   ├── models/           # 数据模型 (Post, Photo, GoldAnalysis)
+│   ├── routes/           # 路由配置
+│   ├── handlers/         # 请求处理器
+│   ├── services/         # 业务逻辑
+│   ├── middleware/       # 中间件 (AdminAuth)
+│   └── Dockerfile
 ├── frontend/             # Vue 3 前端
 │   ├── src/
 │   │   ├── api/          # API 封装
 │   │   ├── router/       # 路由配置
+│   │   ├── stores/       # Pinia 状态管理
 │   │   ├── views/        # 页面组件
 │   │   ├── components/   # 公共组件
 │   │   └── style/        # 样式文件
-│   ├── Dockerfile        # 前端镜像构建
-│   ├── nginx.conf        # 前端 Nginx 配置
-│   └── package.json
-├── nginx/                # 主 Nginx 配置
-│   ├── nginx.conf        # 主配置
-│   └── conf.d/           # 站点配置
+│   ├── nginx.conf        # 容器内 Nginx 配置
+│   └── Dockerfile
+├── ai-service/           # Python AI 服务
+│   ├── main.py           # FastAPI 入口
+│   ├── config.py         # 配置管理
+│   ├── services/         # LLM / 财经数据服务
+│   ├── prompts/          # AI 提示词
+│   └── Dockerfile
+├── db/migrations/        # Flyway 数据库迁移
+├── nginx/                # 主 Nginx 反向代理配置
 ├── scripts/              # 部署脚本
-│   └── deploy.sh         # 手动部署脚本
-├── .github/workflows/    # GitHub Actions
-│   └── deploy.yml        # CI/CD 工作流
-├── docker-compose.yml    # 开发环境
+├── .github/workflows/    # GitHub Actions CI/CD
+├── docker-compose.yml    # 开发环境 (PostgreSQL + Flyway)
 ├── docker-compose.prod.yml # 生产环境
-└── .env.prod.example     # 生产环境变量
+└── .env.prod.example     # 生产环境变量模板
 ```
 
 ## 技术栈
 
 ### 后端
-
-- Go 1.23
-- Gin - Web 框架
+- Go 1.23 + Gin Web 框架
 - GORM - ORM 库
-- PostgreSQL - 数据库
+- PostgreSQL 16 + Flyway 数据库迁移
+- frontmatter - Markdown 前置数据解析
 
 ### 前端
-- Vue 3
-- Vite - 构建工具
+- Vue 3 + Composition API (`<script setup>`)
+- Vite 5 - 构建工具
 - Vue Router - 路由
 - Pinia - 状态管理
 - Axios - HTTP 客户端
+- marked - Markdown 渲染
+- KaTeX - LaTeX 公式渲染
+- ECharts - 图表可视化
+- Three.js - 3D 图形
+
+### AI 服务
+- Python 3.12 + FastAPI
+- OpenAI 兼容 LLM API
+- akshare - 财经数据获取
 
 ## 快速开始
 
 ### 1. 启动数据库
 
 ```bash
-docker-compose up -d
+docker-compose up -d  # 启动 PostgreSQL + Flyway 自动迁移
 ```
 
 ### 2. 启动后端
 
 ```bash
 cd backend
-
-# 复制环境变量文件
-cp .env.example .env
-
-# 下载依赖
+cp .env.example .env  # 配置环境变量
 go mod download
-
-# 运行
-go run main.go
+go run main.go        # http://localhost:8080
 ```
-
-后端将运行在 http://localhost:8080
 
 ### 3. 启动前端
 
 ```bash
 cd frontend
-
-# 安装依赖
 npm install
-
-# 启动开发服务器
-npm run dev
+npm run dev           # http://localhost:5173
 ```
 
-前端将运行在 http://localhost:5173
+### 4. 启动 AI 服务（可选）
+
+```bash
+cd ai-service
+pip install -r requirements.txt
+cp .env.example .env  # 配置 LLM API 密钥
+python main.py        # http://localhost:8000
+```
+
+## API 概览
+
+### 后端 API (`/api`)
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/health` | 健康检查 |
+| POST | `/api/auth/verify` | 验证管理员 API Key |
+| GET | `/api/posts` | 获取文章列表 |
+| GET | `/api/posts/:slug` | 获取单篇文章 |
+| POST | `/api/webhooks/sync` | 同步 Git 仓库文章 (管理员) |
+| GET | `/api/photos` | 获取照片列表（分页） |
+| GET | `/api/photos/:id` | 获取单张照片 |
+| GET | `/api/photos/filters` | 获取筛选选项 |
+| POST/PUT/DELETE | `/api/photos` | 照片管理 (管理员) |
+| GET | `/api/gold/today` | 获取今日黄金分析 |
+
+### AI 服务 API (`/ai-api` 代理)
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/gold/analyze` | AI 黄金分析 |
+| GET | `/api/finance/search` | 搜索股票/基金 |
+| GET | `/api/finance/history` | 获取历史数据 |
 
 ## 生产部署
 
@@ -94,25 +137,36 @@ npm run dev
 
 ```
                         ┌─────────────┐
-                        │   Cloudflare
-                        │     DNS     │
-                        └──────┬──────┘
+                        │  Cloudflare  │
+                        │     DNS      │
+                        └──────┬───────┘
                                │
-                        ┌──────▼──────┐
-                        │   Nginx     │
-                        │   :80/:443  │
-                        └──────┬──────┘
+                        ┌──────▼───────┐
+                        │    Nginx     │
+                        │   :80/:443   │
+                        └──────┬───────┘
                                │
-            ┌──────────────────┼──────────────────┐
-            │                  │                  │
-    ┌───────▼───────┐  ┌───────▼───────┐  ┌──────▼─────┐
-    │   Frontend    │  │    Backend    │  │ PostgreSQL │
-    │   (Vue SPA)   │  │   (Go API)    │  │             │
-    │   :80         │  │   :8080       │  │   :5432     │
-    └───────────────┘  └───────────────┘  └────────────┘
+         ┌─────────────────────┼─────────────────────┐
+         │                     │                     │
+ ┌───────▼───────┐    ┌───────▼───────┐    ┌────────▼────────┐
+ │   Frontend    │    │    Backend    │    │   AI Service    │
+ │   (Vue SPA)   │    │   (Go API)    │    │   (FastAPI)     │
+ │    :9081      │    │    :9080      │    │    :8000        │
+ └───────────────┘    └───────┬───────┘    └─────────────────┘
+                              │
+                      ┌───────▼───────┐
+                      │  PostgreSQL   │
+                      │    :5432      │
+                      │  (Flyway)     │
+                      └───────────────┘
 ```
 
 ### 自动部署（GitHub Actions）
+
+推送到 `develop` 分支自动触发部署流程：
+1. 构建 backend、frontend、ai-service Docker 镜像
+2. 推送镜像到 ghcr.io/santashen/
+3. SSH 到服务器拉取最新镜像并重启服务
 
 首次部署需要在 GitHub 仓库配置以下 Secrets：
 
@@ -123,29 +177,11 @@ npm run dev
 | `SERVER_SSH_KEY` | SSH 私钥 | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
 | `SERVER_PORT` | SSH 端口（可选） | `22` |
 
-**配置步骤：**
-
-1. 在服务器上生成 SSH 密钥对（如果没有）：
-```bash
-ssh-keygen -t ed25519 -C "github-actions" -f ~/.ssh/github_actions
-```
-
-2. 将公钥添加到服务器 authorized_keys：
-```bash
-cat ~/.ssh/github_actions.pub >> ~/.ssh/authorized_keys
-```
-
-3. 将私钥内容添加到 GitHub Secrets（`SERVER_SSH_KEY`）
-
-4. 推送代码到 `develop` 分支，自动触发部署
-
 ### 手动部署
-
-如果需要在服务器上手动部署：
 
 ```bash
 # 1. 克隆或更新代码
-cd /data/www/v2.windsong.top
+cd /data/web-dockers/Windsong-v2
 git fetch origin
 git reset --hard origin/develop
 
@@ -159,15 +195,6 @@ echo $GITHUB_TOKEN | docker login ghcr.io -u <username> --password-stdin
 # 4. 启动服务
 docker-compose -f docker-compose.prod.yml up -d
 ```
-
-## 开发计划
-
-- [ ] 用户认证系统
-- [ ] 文章管理（增删改查）
-- [ ] 评论系统
-- [ ] 标签和分类
-- [ ] 相册功能
-- [ ] 搜索功能
 
 ## License
 
