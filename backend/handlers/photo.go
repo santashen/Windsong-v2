@@ -14,11 +14,11 @@ import (
 
 // PhotoHandler handles photo-related HTTP requests
 type PhotoHandler struct {
-	photoService *services.PhotoService
+	photoService PhotoServiceInterface
 }
 
 // NewPhotoHandler creates a new PhotoHandler
-func NewPhotoHandler(photoService *services.PhotoService) *PhotoHandler {
+func NewPhotoHandler(photoService PhotoServiceInterface) *PhotoHandler {
 	return &PhotoHandler{photoService: photoService}
 }
 
