@@ -1,6 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
+import structlog
+
+logger = structlog.get_logger()
+
 
 class BaseLLMService(ABC):
     """LLM service base class for future extensibility."""
@@ -30,6 +34,8 @@ class OpenAICompatibleService(BaseLLMService):
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
 
+        logger.debug("LLM request", model=self.model, message_count=len(messages))
+
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{self.api_url}/v1/chat/completions",
@@ -47,6 +53,8 @@ class OpenAICompatibleService(BaseLLMService):
             )
             response.raise_for_status()
             data = response.json()
+
+            logger.debug("LLM response received", model=self.model)
             return data["choices"][0]["message"]["content"]
 
     def get_model_name(self) -> str:

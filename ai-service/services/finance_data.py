@@ -1,10 +1,10 @@
-import logging
 from datetime import datetime, timedelta
 
 import akshare as ak
 import pandas as pd
+import structlog
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 
 class FinanceDataService:
@@ -20,7 +20,7 @@ class FinanceDataService:
             try:
                 self._stock_list = ak.stock_info_a_code_name()
             except Exception as e:
-                logger.error(f"Failed to fetch stock list: {e}")
+                logger.error("failed to fetch stock list", error=str(e))
                 return pd.DataFrame(columns=["code", "name"])
         return self._stock_list
 
@@ -33,7 +33,7 @@ class FinanceDataService:
                     columns={"基金代码": "code", "基金简称": "name"}
                 )
             except Exception as e:
-                logger.error(f"Failed to fetch fund list: {e}")
+                logger.error("failed to fetch fund list", error=str(e))
                 return pd.DataFrame(columns=["code", "name"])
         return self._fund_list
 
@@ -59,7 +59,7 @@ class FinanceDataService:
                         "type": "stock",
                     })
         except Exception as e:
-            logger.warning(f"Stock search error: {e}")
+            logger.warning("stock search error", error=str(e), keyword=keyword)
 
         # Search funds
         try:
@@ -75,7 +75,7 @@ class FinanceDataService:
                         "type": "fund",
                     })
         except Exception as e:
-            logger.warning(f"Fund search error: {e}")
+            logger.warning("fund search error", error=str(e), keyword=keyword)
 
         return results[:limit]
 
@@ -109,7 +109,7 @@ class FinanceDataService:
             }
             return result
         except Exception as e:
-            logger.error(f"Failed to fetch stock history for {code}: {e}")
+            logger.error("failed to fetch stock history", code=code, error=str(e))
             raise
 
     def get_fund_history(
@@ -138,8 +138,8 @@ class FinanceDataService:
                 df_cum = df_cum[(df_cum["净值日期"] >= start) & (df_cum["净值日期"] <= end)]
                 df_cum = df_cum.sort_values("净值日期")
                 cum_nav = df_cum["累计净值"].tolist()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("cumulative NAV not available", code=code, error=str(e))
 
             # Calculate daily return from NAV
             if nav:
@@ -161,7 +161,7 @@ class FinanceDataService:
             }
             return result
         except Exception as e:
-            logger.error(f"Failed to fetch fund history for {code}: {e}")
+            logger.error("failed to fetch fund history", code=code, error=str(e))
             raise
 
     def get_history(

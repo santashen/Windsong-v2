@@ -2,13 +2,14 @@ package main
 
 import (
 	"flag"
-	"log"
 	"os"
 
 	"github.com/gin-gonic/gin"
 
 	"windsong/config"
 	"windsong/database"
+	"windsong/logger"
+	"windsong/middleware"
 	"windsong/routes"
 	"windsong/services"
 )
@@ -20,6 +21,9 @@ func main() {
 
 	// Load configuration
 	cfg := config.Load()
+
+	// Initialize structured logger
+	logger.Init(cfg.IsProduction())
 
 	// Set Gin mode based on production flag
 	if cfg.IsProduction() {
@@ -35,34 +39,37 @@ func main() {
 		return
 	}
 
-	// Create Gin router
-	r := gin.Default()
+	// Create Gin router with custom middleware
+	r := gin.New()
+	r.Use(middleware.RequestID())
+	r.Use(middleware.Logger())
+	r.Use(middleware.Recovery())
 
 	// Setup routes
 	routes.Setup(r, cfg)
 
 	// Start server
-	log.Printf("Server starting on port %s...", cfg.Port)
+	logger.Log.Info().Str("port", cfg.Port).Msg("server starting")
 	if err := r.Run(":" + cfg.Port); err != nil {
-		log.Fatal("Failed to start server:", err)
+		logger.Log.Fatal().Err(err).Msg("failed to start server")
 	}
 }
 
 // importPhotos imports photos from JSON file
 func importPhotos() {
-	log.Println("Importing photos from data/photos.json...")
+	logger.Log.Info().Msg("importing photos from data/photos.json")
 
 	// Read JSON file
 	data, err := os.ReadFile("data/photos.json")
 	if err != nil {
-		log.Fatal("Failed to read photos.json:", err)
+		logger.Log.Fatal().Err(err).Msg("failed to read photos.json")
 	}
 
 	// Import using service
 	photoService := services.NewPhotoService(database.GetDB())
 	if err := photoService.ImportFromJSON(data); err != nil {
-		log.Fatal("Failed to import photos:", err)
+		logger.Log.Fatal().Err(err).Msg("failed to import photos")
 	}
 
-	log.Println("Photos imported successfully!")
+	logger.Log.Info().Msg("photos imported successfully")
 }

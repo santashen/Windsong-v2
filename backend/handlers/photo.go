@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"windsong/middleware"
 	"windsong/models"
 	"windsong/services"
 )
@@ -49,6 +50,7 @@ func (h *PhotoHandler) GetPhotos(c *gin.Context) {
 	// Get photos
 	response, err := h.photoService.GetPhotos(query)
 	if err != nil {
+		middleware.GetLogger(c).Error().Err(err).Msg("failed to fetch photos")
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to fetch photos",
 		})
@@ -62,6 +64,7 @@ func (h *PhotoHandler) GetPhotos(c *gin.Context) {
 func (h *PhotoHandler) GetFilterOptions(c *gin.Context) {
 	options, err := h.photoService.GetFilterOptions()
 	if err != nil {
+		middleware.GetLogger(c).Error().Err(err).Msg("failed to fetch filter options")
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to fetch filter options",
 		})
@@ -95,6 +98,7 @@ func (h *PhotoHandler) GetPhoto(c *gin.Context) {
 
 	photo, err := h.photoService.GetPhotoByID(uint(id))
 	if err != nil {
+		middleware.GetLogger(c).Warn().Err(err).Uint64("photo_id", id).Msg("photo not found")
 		c.JSON(http.StatusNotFound, gin.H{"error": "Photo not found"})
 		return
 	}
@@ -134,6 +138,7 @@ func (h *PhotoHandler) CreatePhoto(c *gin.Context) {
 	}
 
 	if err := h.photoService.CreatePhoto(photo); err != nil {
+		middleware.GetLogger(c).Error().Err(err).Msg("failed to create photo")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create photo"})
 		return
 	}
@@ -179,6 +184,7 @@ func (h *PhotoHandler) UpdatePhoto(c *gin.Context) {
 	}
 
 	if err := h.photoService.UpdatePhoto(uint(id), photo); err != nil {
+		middleware.GetLogger(c).Warn().Err(err).Uint64("photo_id", id).Msg("photo not found for update")
 		c.JSON(http.StatusNotFound, gin.H{"error": "Photo not found"})
 		return
 	}
@@ -197,6 +203,7 @@ func (h *PhotoHandler) DeletePhoto(c *gin.Context) {
 	}
 
 	if err := h.photoService.DeletePhoto(uint(id)); err != nil {
+		middleware.GetLogger(c).Warn().Err(err).Uint64("photo_id", id).Msg("photo not found for delete")
 		c.JSON(http.StatusNotFound, gin.H{"error": "Photo not found"})
 		return
 	}
