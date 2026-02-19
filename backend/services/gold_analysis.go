@@ -14,12 +14,20 @@ import (
 type GoldAnalysisService struct {
 	db           *gorm.DB
 	aiServiceURL string
+	httpClient   HTTPClient
 }
 
-func NewGoldAnalysisService(db *gorm.DB, aiServiceURL string) *GoldAnalysisService {
+func NewGoldAnalysisService(db *gorm.DB, aiServiceURL string, httpClient ...HTTPClient) *GoldAnalysisService {
+	var client HTTPClient
+	if len(httpClient) > 0 && httpClient[0] != nil {
+		client = httpClient[0]
+	} else {
+		client = &http.Client{Timeout: 180 * time.Second}
+	}
 	return &GoldAnalysisService{
 		db:           db,
 		aiServiceURL: aiServiceURL,
+		httpClient:   client,
 	}
 }
 
@@ -74,9 +82,12 @@ func (s *GoldAnalysisService) GetTodayAnalysis() (*models.GoldAnalysis, error) {
 func (s *GoldAnalysisService) fetchFromAIService() (*AIServiceResponse, error) {
 	url := fmt.Sprintf("%s/api/gold/analyze", s.aiServiceURL)
 
-	client := &http.Client{Timeout: 180 * time.Second} // Long timeout for LLM
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create request failed: %w", err)
+	}
 
-	resp, err := client.Get(url)
+	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}

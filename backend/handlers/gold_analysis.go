@@ -6,14 +6,13 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"windsong/middleware"
-	"windsong/services"
 )
 
 type GoldAnalysisHandler struct {
-	service *services.GoldAnalysisService
+	service GoldAnalysisServiceInterface
 }
 
-func NewGoldAnalysisHandler(service *services.GoldAnalysisService) *GoldAnalysisHandler {
+func NewGoldAnalysisHandler(service GoldAnalysisServiceInterface) *GoldAnalysisHandler {
 	return &GoldAnalysisHandler{service: service}
 }
 

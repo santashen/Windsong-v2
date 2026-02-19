@@ -26,16 +26,53 @@ type PostService struct {
 	db        *gorm.DB
 	repoURL   string
 	postsDir  string
+	gitSyncer GitSyncer
 	syncMutex sync.Mutex
 }
 
 // NewPostService creates a new PostService
-func NewPostService(db *gorm.DB, repoURL, postsDir string) *PostService {
-	return &PostService{
-		db:       db,
-		repoURL:  repoURL,
-		postsDir: postsDir,
+func NewPostService(db *gorm.DB, repoURL, postsDir string, gitSyncer ...GitSyncer) *PostService {
+	var syncer GitSyncer
+	if len(gitSyncer) > 0 && gitSyncer[0] != nil {
+		syncer = gitSyncer[0]
+	} else {
+		syncer = &defaultGitSyncer{}
 	}
+	return &PostService{
+		db:        db,
+		repoURL:   repoURL,
+		postsDir:  postsDir,
+		gitSyncer: syncer,
+	}
+}
+
+// defaultGitSyncer implements GitSyncer using os/exec git commands
+type defaultGitSyncer struct{}
+
+func (g *defaultGitSyncer) Sync(repoURL, postsDir string) error {
+	if repoURL == "" {
+		return fmt.Errorf("POSTS_REPO_URL not configured")
+	}
+
+	if _, err := os.Stat(postsDir); os.IsNotExist(err) {
+		logger.Log.Info().Str("dir", postsDir).Msg("cloning posts repository")
+		cmd := exec.Command("git", "clone", "--depth", "1", repoURL, postsDir)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("git clone failed: %s - %v", string(output), err)
+		}
+		logger.Log.Info().Msg("repository cloned successfully")
+	} else {
+		logger.Log.Info().Str("dir", postsDir).Msg("pulling latest changes")
+		cmd := exec.Command("git", "-C", postsDir, "pull", "--ff-only")
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("git pull failed: %s - %v", string(output), err)
+		}
+		logger.Log.Info().Msg("repository updated successfully")
+	}
+
+	return nil
 }
 
 // PostQuery holds query parameters for post list
@@ -78,7 +115,7 @@ func (s *PostService) SyncPosts() (*SyncResult, error) {
 	result := &SyncResult{}
 
 	// Step 1: Git sync (clone or pull)
-	if err := s.gitSync(); err != nil {
+	if err := s.gitSyncer.Sync(s.repoURL, s.postsDir); err != nil {
 		return nil, fmt.Errorf("git sync failed: %w", err)
 	}
 
@@ -194,36 +231,6 @@ func (s *PostService) SyncPosts() (*SyncResult, error) {
 	}
 
 	return result, nil
-}
-
-// gitSync clones or pulls the posts repository
-func (s *PostService) gitSync() error {
-	if s.repoURL == "" {
-		return fmt.Errorf("POSTS_REPO_URL not configured")
-	}
-
-	// Check if directory exists
-	if _, err := os.Stat(s.postsDir); os.IsNotExist(err) {
-		// Clone repository
-		logger.Log.Info().Str("dir", s.postsDir).Msg("cloning posts repository")
-		cmd := exec.Command("git", "clone", "--depth", "1", s.repoURL, s.postsDir)
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("git clone failed: %s - %v", string(output), err)
-		}
-		logger.Log.Info().Msg("repository cloned successfully")
-	} else {
-		// Pull latest changes
-		logger.Log.Info().Str("dir", s.postsDir).Msg("pulling latest changes")
-		cmd := exec.Command("git", "-C", s.postsDir, "pull", "--ff-only")
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("git pull failed: %s - %v", string(output), err)
-		}
-		logger.Log.Info().Msg("repository updated successfully")
-	}
-
-	return nil
 }
 
 // parseMarkdownFile parses a markdown file and extracts front matter and content

@@ -11,11 +11,11 @@ import (
 
 // PostHandler handles post-related HTTP requests
 type PostHandler struct {
-	postService *services.PostService
+	postService PostServiceInterface
 }
 
 // NewPostHandler creates a new PostHandler
-func NewPostHandler(postService *services.PostService) *PostHandler {
+func NewPostHandler(postService PostServiceInterface) *PostHandler {
 	return &PostHandler{postService: postService}
 }
 

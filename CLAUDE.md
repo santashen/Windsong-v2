@@ -153,6 +153,47 @@ handlers.ValidationError(c, err)
 - Tables: posts, photos, gold_analyses
 - Migration files in `db/migrations/` following Flyway naming convention (V1__, V2__, etc.)
 
+### Testing
+
+#### Backend 测试约定
+
+**依赖注入模式：** Handler 通过接口持有 service，service 通过接口持有外部依赖。新增代码必须遵循此模式。
+
+- Handler 层接口定义在 `handlers/interfaces.go`，handler struct 字段使用接口类型而非具体 service 指针
+- Service 层外部依赖接口定义在 `services/interfaces.go`（如 `HTTPClient`、`GitSyncer`），通过构造函数可选参数注入，默认使用真实实现
+
+**新增 handler 时：**
+1. 在 `handlers/interfaces.go` 添加对应的 service 接口
+2. handler struct 字段类型使用该接口
+3. 创建 `handlers/<name>_test.go`，用函数式 mock 测试（参考现有 handler 测试）
+4. 使用 `handlers/testutil_test.go` 中的 `performRequest` 辅助函数
+
+**新增 service 时：**
+1. 若依赖外部服务（HTTP API、命令行工具等），在 `services/interfaces.go` 定义接口，构造函数用 `...Interface` 可变参数注入
+2. 纯函数（解析、转换等）直接写单元测试：`services/<name>_test.go`
+3. 涉及数据库的逻辑写集成测试：`services/<name>_integration_test.go`，加 `//go:build integration` 标签，使用 `testutil/testdb.go` 启动临时 PostgreSQL
+
+**运行测试：**
+```bash
+cd backend
+go test ./...                          # 单元测试
+go test -tags integration ./...        # 含集成测试（需要 Docker）
+go test -v -race -coverprofile=c.out ./...  # 带竞态检测和覆盖率
+```
+
+#### Frontend 测试约定
+
+- 组件测试：Vitest + `@vue/test-utils`，配置在 `vite.config.js` 的 `test` 块
+- Store 测试放 `stores/__tests__/`，组件测试放 `components/<module>/__tests__/`
+- E2E 测试：Playwright，配置在 `playwright.config.js`，测试文件放 `e2e/`
+
+**运行测试：**
+```bash
+cd frontend
+npm test                # Vitest 单元/组件测试
+npx playwright test     # E2E 测试
+```
+
 ### Deployment
 - GitHub Actions builds Docker images for backend, frontend, and ai-service on push to main/develop
 - Images pushed to ghcr.io/santashen/

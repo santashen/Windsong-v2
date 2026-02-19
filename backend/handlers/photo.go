@@ -15,11 +15,11 @@ import (
 
 // PhotoHandler handles photo-related HTTP requests
 type PhotoHandler struct {
-	photoService *services.PhotoService
+	photoService PhotoServiceInterface
 }
 
 // NewPhotoHandler creates a new PhotoHandler
-func NewPhotoHandler(photoService *services.PhotoService) *PhotoHandler {
+func NewPhotoHandler(photoService PhotoServiceInterface) *PhotoHandler {
 	return &PhotoHandler{photoService: photoService}
 }
 
@@ -140,7 +140,14 @@ func (h *PhotoHandler) GetPhoto(c *gin.Context) {
 	photo, err := h.photoService.GetPhotoByID(uint(id))
 	if err != nil {
 		middleware.GetLogger(c).Warn().Err(err).Uint64("photo_id", id).Msg("photo not found")
-		Error(c, http.StatusNotFound, CodeNotFound, "Photo not found") godoc
+		Error(c, http.StatusNotFound, CodeNotFound, "Photo not found")
+		return
+	}
+
+	Success(c, photo)
+}
+
+// CreatePhoto godoc
 // @Summary      Create a photo
 // @Description  Creates a new photo entry
 // @Tags         photos
