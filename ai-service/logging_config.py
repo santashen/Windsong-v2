@@ -33,7 +33,7 @@ def configure_logging() -> None:
             *shared_processors,
             structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
         ],
-        logger_factory=structlog.PrintLoggerFactory(),
+        logger_factory=structlog.stdlib.LoggerFactory(), 
         wrapper_class=structlog.make_filtering_bound_logger(log_level),
         cache_logger_on_first_use=True,
     )
