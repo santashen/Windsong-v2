@@ -41,7 +41,7 @@ services:
 
   # Go 后端 API
   backend:
-    image: ghcr.io/santashen/windsong-backend:latest
+    image: ccr.ccs.tencentyun.com/windsong/backend:latest
     container_name: windsong-backend
     restart: always
     ports:
@@ -71,7 +71,7 @@ services:
 
   # Vue 前端（Nginx 容器）
   frontend:
-    image: ghcr.io/santashen/windsong-frontend:latest
+    image: ccr.ccs.tencentyun.com/windsong/frontend:latest
     container_name: windsong-frontend
     restart: always
     ports:
@@ -81,7 +81,7 @@ services:
 
   # Python AI 服务
   ai-service:
-    image: ghcr.io/santashen/windsong-ai-service:latest
+    image: ccr.ccs.tencentyun.com/windsong/ai-service:latest
     container_name: windsong-ai-service
     restart: always
     environment:

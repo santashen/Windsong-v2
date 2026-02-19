@@ -8,18 +8,17 @@ on:
   workflow_dispatch:
 
 env:
-  REGISTRY: ghcr.io
-  BACKEND_IMAGE: windsong-backend
-  FRONTEND_IMAGE: windsong-frontend
-  AI_SERVICE_IMAGE: windsong-ai-service
+  # 1. 更换为腾讯云镜像仓库地址
+  REGISTRY: ccr.ccs.tencentyun.com
+  # 2. 腾讯云的命名空间 (刚才在控制台创建的)
+  NAMESPACE: windsong
+  BACKEND_IMAGE: backend
+  FRONTEND_IMAGE: frontend
+  AI_SERVICE_IMAGE: ai-service
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,46 +26,44 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GitHub Container Registry
+      # 3. 登录到腾讯云镜像仓库
+      - name: Log in to Tencent Cloud Container Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.TENCENT_CLOUD_USERNAME }}
+          password: ${{ secrets.TENCENT_CLOUD_PASSWORD }}
 
-      # 构建并推送后端镜像
       - name: Build and push backend image
         uses: docker/build-push-action@v5
         with:
           context: ./backend
           push: true
           tags: |
-            ${{ env.REGISTRY }}/santashen/${{ env.BACKEND_IMAGE }}:latest
-            ${{ env.REGISTRY }}/santashen/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.BACKEND_IMAGE }}:latest
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # 构建并推送前端镜像
       - name: Build and push frontend image
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
           push: true
           tags: |
-            ${{ env.REGISTRY }}/santashen/${{ env.FRONTEND_IMAGE }}:latest
-            ${{ env.REGISTRY }}/santashen/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.FRONTEND_IMAGE }}:latest
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # 构建并推送 AI 服务镜像
       - name: Build and push ai-service image
         uses: docker/build-push-action@v5
         with:
           context: ./ai-service
           push: true
           tags: |
-            ${{ env.REGISTRY }}/santashen/${{ env.AI_SERVICE_IMAGE }}:latest
-            ${{ env.REGISTRY }}/santashen/${{ env.AI_SERVICE_IMAGE }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.AI_SERVICE_IMAGE }}:latest
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.AI_SERVICE_IMAGE }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -75,11 +72,6 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/develop'
     
-    # 【修复1】必须显式声明 deploy job 的权限，否则 GITHUB_TOKEN 无法读取包
-    permissions:
-      contents: read
-      packages: read
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -92,16 +84,15 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT || 22 }}
           script_stop: true
-          # 【修复2】在这里列出变量名，使用大写更规范（GHCR_TOKEN, GHCR_USER）
-          envs: DB_USER,DB_PASSWORD,DB_NAME,GHCR_TOKEN,GHCR_USER,ADMIN_API_KEY,POSTS_REPO_URL,LLM_API_URL,LLM_API_KEY,LLM_MODEL
+          # 4. 传入腾讯云的凭证
+          envs: DB_USER,DB_PASSWORD,DB_NAME,TENCENT_USER,TENCENT_PWD,ADMIN_API_KEY,POSTS_REPO_URL,LLM_API_URL,LLM_API_KEY,LLM_MODEL,REGISTRY,NAMESPACE
           script: |
             cd /data/web-dockers/Windsong-v2
 
-            # 拉取代码
             git fetch origin
             git reset --hard origin/develop
 
-            # 生成 .env 文件
+            # 生成 .env
             echo "DB_USER=$DB_USER" > .env
             echo "DB_PASSWORD=$DB_PASSWORD" >> .env
             echo "DB_NAME=$DB_NAME" >> .env
@@ -112,16 +103,15 @@ jobs:
             echo "LLM_MODEL=$LLM_MODEL" >> .env
             chmod 600 .env
 
-            # 【修复3】使用传入的环境变量进行登录，确保变量加双引号
-            # 建议先 logout 避免旧的凭证冲突
-            docker logout ghcr.io || true
-            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            # 5. 在服务器上登录腾讯云仓库
+            echo "$TENCENT_PWD" | docker login $REGISTRY -u "$TENCENT_USER" --password-stdin
 
-            # 拉取镜像 (使用小写的用户名，因为 Docker 镜像名必须小写)
-            docker pull ghcr.io/santashen/windsong-backend:latest
-            docker pull ghcr.io/santashen/windsong-frontend:latest
-            docker pull ghcr.io/santashen/windsong-ai-service:latest
-            docker pull flyway/flyway:10
+            # 6. 拉取腾讯云上的镜像
+            docker pull $REGISTRY/$NAMESPACE/backend:latest
+            docker pull $REGISTRY/$NAMESPACE/frontend:latest
+            docker pull $REGISTRY/$NAMESPACE/ai-service:latest
+            # Flyway 如果拉取也慢，建议也转存到腾讯云，或者使用国内镜像源
+            docker pull flyway/flyway:10 || docker pull m.daocloud.io/docker.io/flyway/flyway:10
 
             # 重启容器
             docker compose -f docker-compose.prod.yml down
@@ -133,9 +123,11 @@ jobs:
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_NAME: ${{ secrets.DB_NAME }}
-          # 【修复4】将 Token 和 用户名 映射到环境变量
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GHCR_USER: ${{ github.actor }}
+          # 映射腾讯云凭证
+          TENCENT_USER: ${{ secrets.TENCENT_CLOUD_USERNAME }}
+          TENCENT_PWD: ${{ secrets.TENCENT_CLOUD_PASSWORD }}
+          REGISTRY: ${{ env.REGISTRY }}
+          NAMESPACE: ${{ env.NAMESPACE }}
           ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
           POSTS_REPO_URL: ${{ secrets.POSTS_REPO_URL }}
           LLM_API_URL: ${{ secrets.LLM_API_URL }}
