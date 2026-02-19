@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
+	"windsong/handlers"
 )
 
 // AdminAuth creates a middleware that validates the admin API key
@@ -26,8 +28,9 @@ func AdminAuth(apiKey string) gin.HandlerFunc {
 		}
 
 		if providedKey != apiKey {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Invalid or missing API key",
+			c.JSON(http.StatusUnauthorized, handlers.Response{
+				Code:    handlers.CodeUnauthorized,
+				Message: "Invalid or missing API key",
 			})
 			c.Abort()
 			return

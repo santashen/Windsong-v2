@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 
@@ -19,59 +18,98 @@ func NewPostHandler(postService *services.PostService) *PostHandler {
 	return &PostHandler{postService: postService}
 }
 
-// SyncPosts handles POST /api/webhooks/sync
+// SyncPosts godoc
+// @Summary      Sync posts from git repository
+// @Description  Triggers a sync of blog posts from the configured git repository
+// @Tags         webhooks
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Success      200  {object}  Response{data=services.SyncResult}
+// @Failure      500  {object}  Response
+// @Router       /webhooks/sync [post]
 func (h *PostHandler) SyncPosts(c *gin.Context) {
 	result, err := h.postService.SyncPosts()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Sync failed",
-			"details": err.Error(),
-		})
+		Error(c, http.StatusInternalServerError, CodeInternalError, "Sync failed: "+err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, result)
+	Success(c, result)
 }
 
-// GetPosts handles GET /api/posts
-func (h *PostHandler) GetPosts(c *gin.Context) {
-	// Parse query parameters
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "20"))
-	tag := c.Query("tag")
+// PostListQuery is the query parameter structure for listing posts
+type PostListQuery struct {
+	Page     int    `form:"page" binding:"omitempty,min=1"`
+	PageSize int    `form:"pageSize" binding:"omitempty,min=1,max=100"`
+	Tag      string `form:"tag" binding:"omitempty,max=50"`
+}
 
-	// Build query
-	query := services.PostQuery{
-		Page:     page,
-		PageSize: pageSize,
-		Tag:      tag,
+// GetPosts godoc
+// @Summary      List blog posts
+// @Description  Returns paginated blog posts with optional tag filter
+// @Tags         posts
+// @Produce      json
+// @Param        page      query  int     false  "Page number"     default(1)
+// @Param        pageSize  query  int     false  "Items per page"  default(20)
+// @Param        tag       query  string  false  "Filter by tag"
+// @Success      200  {object}  Response{data=models.PostListResponse}
+// @Failure      400  {object}  Response
+// @Failure      500  {object}  Response
+// @Router       /posts [get]
+func (h *PostHandler) GetPosts(c *gin.Context) {
+	var query PostListQuery
+	if err := c.ShouldBindQuery(&query); err != nil {
+		ValidationError(c, err)
+		return
+	}
+
+	// Apply defaults
+	if query.Page == 0 {
+		query.Page = 1
+	}
+	if query.PageSize == 0 {
+		query.PageSize = 20
+	}
+
+	// Build service query
+	serviceQuery := services.PostQuery{
+		Page:     query.Page,
+		PageSize: query.PageSize,
+		Tag:      query.Tag,
 	}
 
 	// Get posts
-	response, err := h.postService.GetPosts(query)
+	response, err := h.postService.GetPosts(serviceQuery)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to fetch posts",
-		})
+		Error(c, http.StatusInternalServerError, CodeInternalError, "Failed to fetch posts")
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	Success(c, response)
 }
 
-// GetPost handles GET /api/posts/:slug
+// GetPost godoc
+// @Summary      Get a blog post
+// @Description  Returns a single blog post by its slug
+// @Tags         posts
+// @Produce      json
+// @Param        slug  path  string  true  "Post slug"
+// @Success      200   {object}  Response{data=models.Post}
+// @Failure      400   {object}  Response
+// @Failure      404   {object}  Response
+// @Router       /posts/{slug} [get]
 func (h *PostHandler) GetPost(c *gin.Context) {
 	slug := c.Param("slug")
 	if slug == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Slug is required"})
+		Error(c, http.StatusBadRequest, CodeBadRequest, "Slug is required")
 		return
 	}
 
 	post, err := h.postService.GetPostBySlug(slug)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Post not found"})
+		Error(c, http.StatusNotFound, CodeNotFound, "Post not found")
 		return
 	}
 
-	c.JSON(http.StatusOK, post)
+	Success(c, post)
 }

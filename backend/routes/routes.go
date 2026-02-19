@@ -3,9 +3,12 @@ package routes
 import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 
 	"windsong/config"
 	"windsong/database"
+	_ "windsong/docs"
 	"windsong/handlers"
 	"windsong/middleware"
 	"windsong/services"
@@ -25,11 +28,13 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 
 	// Health check
 	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"status":  "ok",
-			"message": "Windsong Blog API is running",
+		handlers.Success(c, gin.H{
+			"status": "ok",
 		})
 	})
+
+	// Swagger UI
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Initialize services
 	photoService := services.NewPhotoService(database.GetDB())
@@ -44,29 +49,29 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 	// Initialize auth handler
 	authHandler := handlers.NewAuthHandler(cfg.AdminAPIKey)
 
-	// API routes
-	api := r.Group("/api")
+	// API v1 routes
+	v1 := r.Group("/api/v1")
 	{
 		// Existing hello endpoint
-		api.GET("/hello", func(c *gin.Context) {
-			c.JSON(200, gin.H{
+		v1.GET("/hello", func(c *gin.Context) {
+			handlers.Success(c, gin.H{
 				"message": "Hello from Windsong Blog API!",
 			})
 		})
 
 		// Auth routes (public)
-		auth := api.Group("/auth")
+		auth := v1.Group("/auth")
 		{
 			auth.POST("/verify", authHandler.Verify)
 		}
 
 		// Photo routes - Public (read-only)
-		api.GET("/photos", photoHandler.GetPhotos)
-		api.GET("/photos/filters", photoHandler.GetFilterOptions)
-		api.GET("/photos/:id", photoHandler.GetPhoto)
+		v1.GET("/photos", photoHandler.GetPhotos)
+		v1.GET("/photos/filters", photoHandler.GetFilterOptions)
+		v1.GET("/photos/:id", photoHandler.GetPhoto)
 
 		// Photo routes - Protected (require API key)
-		adminPhotos := api.Group("/photos")
+		adminPhotos := v1.Group("/photos")
 		adminPhotos.Use(middleware.AdminAuth(cfg.AdminAPIKey))
 		{
 			adminPhotos.POST("", photoHandler.CreatePhoto)
@@ -75,17 +80,17 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 		}
 
 		// Post routes - Public (read-only)
-		api.GET("/posts", postHandler.GetPosts)
-		api.GET("/posts/:slug", postHandler.GetPost)
+		v1.GET("/posts", postHandler.GetPosts)
+		v1.GET("/posts/:slug", postHandler.GetPost)
 
 		// Webhook routes - Protected (require API key)
-		webhooks := api.Group("/webhooks")
+		webhooks := v1.Group("/webhooks")
 		webhooks.Use(middleware.AdminAuth(cfg.AdminAPIKey))
 		{
 			webhooks.POST("/sync", postHandler.SyncPosts)
 		}
 
 		// Gold Analysis routes - Public
-		api.GET("/gold/today", goldAnalysisHandler.GetTodayAnalysis)
+		v1.GET("/gold/today", goldAnalysisHandler.GetTodayAnalysis)
 	}
 }

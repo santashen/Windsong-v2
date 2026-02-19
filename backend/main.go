@@ -1,3 +1,14 @@
+// @title           Windsong Blog API
+// @version         1.0
+// @description     Personal blog system API with posts, photos, and gold analysis.
+
+// @host            localhost:8080
+// @BasePath        /api/v1
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name X-API-Key
+
 package main
 
 import (

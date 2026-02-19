@@ -28,7 +28,7 @@ export const useGoldStore = defineStore('gold', () => {
       const response = await goldApi.getTodayAnalysis()
       analysis.value = response.data
     } catch (err) {
-      error.value = err.response?.data?.error || 'Failed to fetch analysis'
+      error.value = err.message || 'Failed to fetch analysis'
       console.error('Error fetching gold analysis:', err)
     } finally {
       isLoading.value = false

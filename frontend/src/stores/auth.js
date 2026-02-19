@@ -53,8 +53,8 @@ export const useAuthStore = defineStore('auth', () => {
         return false
       }
     } catch (err) {
-      if (err.response?.status === 401) {
-        error.value = err.response?.data?.message || 'Invalid API key'
+      if (err.response?.status === 401 || err.code === 40100) {
+        error.value = err.message || 'Invalid API key'
       } else {
         error.value = 'Authentication failed. Please try again.'
       }

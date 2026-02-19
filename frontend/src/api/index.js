@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: '/api/v1',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
@@ -14,9 +14,22 @@ api.interceptors.request.use(
   error => Promise.reject(error)
 )
 
-// 响应拦截器
+// 响应拦截器 - 解包统一响应信封 { code, message, data }
 api.interceptors.response.use(
-  response => response,
+  response => {
+    const res = response.data
+    if (res && typeof res === 'object' && 'code' in res) {
+      if (res.code === 0) {
+        response.data = res.data
+        return response
+      }
+      const err = new Error(res.message || 'Request failed')
+      err.code = res.code
+      err.response = response
+      return Promise.reject(err)
+    }
+    return response
+  },
   error => Promise.reject(error)
 )
 

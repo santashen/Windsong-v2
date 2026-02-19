@@ -53,8 +53,79 @@ docker-compose -f docker-compose.prod.yml up -d
 - `handlers/` - auth, post, photo, gold_analysis
 - `services/` - post (git sync + markdown parsing), photo (CRUD + import), gold_analysis (AI service calls)
 - `middleware/` - AdminAuth (API key verification)
-- Routes under `/api` prefix, health check at `/health`
+- Routes under `/api/v1` prefix, health check at `/health`, Swagger UI at `/swagger/`
 - In dev mode, CORS allows localhost:5173 and localhost:3000
+
+## API 规范
+
+开发新接口时必须遵循以下规范。
+
+### 统一响应格式
+
+所有接口使用 `handlers.Response` 信封，通过辅助函数返回响应：
+
+```go
+// 成功 (200)
+handlers.Success(c, data)
+
+// 创建成功 (201)
+handlers.SuccessCreated(c, data)
+
+// 业务错误
+handlers.Error(c, http.StatusNotFound, handlers.CodeNotFound, "Resource not found")
+
+// 参数校验失败（自动解析 validator.ValidationErrors）
+handlers.ValidationError(c, err)
+```
+
+响应体结构：`{"code": 0, "message": "success", "data": {...}}`，错误时 `data` 省略。
+
+### 错误码
+
+| 常量 | 值 | 含义 |
+|------|------|------|
+| `CodeSuccess` | 0 | 成功 |
+| `CodeBadRequest` | 40000 | 请求参数错误 |
+| `CodeValidationError` | 40001 | 参数校验失败 |
+| `CodeUnauthorized` | 40100 | 未认证 |
+| `CodeNotFound` | 40400 | 资源不存在 |
+| `CodeInternalError` | 50000 | 服务器内部错误 |
+| `CodeExternalService` | 50200 | 外部服务调用失败 |
+
+新增错误码遵循 `HTTP状态码 × 100 + 子码` 的命名规则，定义在 `handlers/response.go`。
+
+### 请求参数校验
+
+- JSON body 使用 `binding` tag + `c.ShouldBindJSON()`，错误交给 `ValidationError(c, err)`
+- Query 参数定义 struct 使用 `form` + `binding` tag + `c.ShouldBindQuery()`
+- 不要手动 `strconv.Atoi` 解析分页参数，用 query struct 代替
+- 分页参数默认值：`Page=1, PageSize=20`，在 handler 中用 `if == 0` 赋默认值
+
+### Swagger 注释
+
+每个 handler 方法必须添加 swaggo 注释，新增接口后执行 `cd backend && swag init` 重新生成文档：
+
+```go
+// GetResource godoc
+// @Summary      简要描述
+// @Description  详细描述
+// @Tags         分组名
+// @Accept       json
+// @Produce      json
+// @Security     ApiKeyAuth           // 需要认证时添加
+// @Param        id   path   int    true  "Resource ID"
+// @Param        body body   Input  true  "Request body"
+// @Success      200  {object}  handlers.Response{data=models.Resource}
+// @Failure      400  {object}  handlers.Response
+// @Router       /resource/{id} [get]
+```
+
+### 前端对接
+
+- 后端 API baseURL 为 `/api/v1`（`frontend/src/api/index.js`）
+- 响应拦截器自动解包信封：`response.data` 已经是内层 `data` 字段
+- 业务错误（code ≠ 0）自动 reject，store 中通过 `err.message` 获取错误信息
+- AI 服务的 `aiApi` 实例不经过信封解包，保持原样
 
 ### Frontend (`frontend/src/`)
 - Vue 3 + Vite + Vue Router + Pinia
@@ -63,7 +134,7 @@ docker-compose -f docker-compose.prod.yml up -d
   - Pinia stores: Use Setup Store syntax (function with `ref`, `computed`, return object)
   - Avoid Options API unless necessary for compatibility
 - `@` alias resolves to `src/` directory
-- API requests: `/api` proxied to backend:8080, `/ai-api` proxied to ai-service:8000 (in dev via Vite config)
+- API requests: `/api/v1` proxied to backend:8080, `/ai-api` proxied to ai-service:8000 (in dev via Vite config)
 - Views: Home, Gallery, BlogList, BlogPost, About, Services, GoldAnalysis, Monitor, FinanceView, Admin (Login/Photos)
 - Components: `layout/` (Header/Footer), `blog/`, `gallery/`, `monitor/`, `admin/`, `icons/`
 - Stores: auth, blog, gallery, gold, monitor, finance

@@ -16,16 +16,20 @@ func NewGoldAnalysisHandler(service *services.GoldAnalysisService) *GoldAnalysis
 	return &GoldAnalysisHandler{service: service}
 }
 
-// GetTodayAnalysis handles GET /api/gold/today
+// GetTodayAnalysis godoc
+// @Summary      Get today's gold analysis
+// @Description  Returns the AI-generated gold market analysis for today
+// @Tags         gold
+// @Produce      json
+// @Success      200  {object}  Response{data=models.GoldAnalysis}
+// @Failure      500  {object}  Response
+// @Router       /gold/today [get]
 func (h *GoldAnalysisHandler) GetTodayAnalysis(c *gin.Context) {
 	analysis, err := h.service.GetTodayAnalysis()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "Failed to get today's analysis",
-			"details": err.Error(),
-		})
+		Error(c, http.StatusInternalServerError, CodeExternalService, "Failed to get today's analysis: "+err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, analysis)
+	Success(c, analysis)
 }

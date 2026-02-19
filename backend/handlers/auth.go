@@ -27,20 +27,27 @@ type VerifyResponse struct {
 	Message string `json:"message,omitempty"`
 }
 
-// Verify handles POST /api/auth/verify
+// Verify godoc
+// @Summary      Verify admin API key
+// @Description  Validates the provided API key for admin access
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body  body      VerifyRequest  true  "API key to verify"
+// @Success      200   {object}  Response{data=VerifyResponse}
+// @Failure      400   {object}  Response
+// @Failure      401   {object}  Response
+// @Router       /auth/verify [post]
 func (h *AuthHandler) Verify(c *gin.Context) {
 	var input VerifyRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, VerifyResponse{
-			Valid:   false,
-			Message: "API key is required",
-		})
+		Error(c, http.StatusBadRequest, CodeValidationError, "API key is required")
 		return
 	}
 
 	// In development mode (no API key configured), accept any non-empty key
 	if h.apiKey == "" {
-		c.JSON(http.StatusOK, VerifyResponse{
+		Success(c, VerifyResponse{
 			Valid:   true,
 			Message: "Development mode - any key accepted",
 		})
@@ -49,14 +56,11 @@ func (h *AuthHandler) Verify(c *gin.Context) {
 
 	// Verify the API key
 	if input.APIKey != h.apiKey {
-		c.JSON(http.StatusUnauthorized, VerifyResponse{
-			Valid:   false,
-			Message: "Invalid API key",
-		})
+		Error(c, http.StatusUnauthorized, CodeUnauthorized, "Invalid API key")
 		return
 	}
 
-	c.JSON(http.StatusOK, VerifyResponse{
+	Success(c, VerifyResponse{
 		Valid:   true,
 		Message: "Authentication successful",
 	})
