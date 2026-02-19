@@ -28,6 +28,9 @@ func AdminAuth(apiKey string) gin.HandlerFunc {
 		}
 
 		if providedKey != apiKey {
+			GetLogger(c).Warn().
+				Str("ip", c.ClientIP()).
+				Msg("authentication failed: invalid or missing API key")
 			c.JSON(http.StatusUnauthorized, handlers.Response{
 				Code:    handlers.CodeUnauthorized,
 				Message: "Invalid or missing API key",

@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
+	"windsong/middleware"
 )
 
 // AuthHandler handles authentication-related HTTP requests
@@ -56,6 +58,9 @@ func (h *AuthHandler) Verify(c *gin.Context) {
 
 	// Verify the API key
 	if input.APIKey != h.apiKey {
+		middleware.GetLogger(c).Warn().
+			Str("ip", c.ClientIP()).
+			Msg("auth verify failed: invalid API key")
 		Error(c, http.StatusUnauthorized, CodeUnauthorized, "Invalid API key")
 		return
 	}

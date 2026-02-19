@@ -10,6 +10,7 @@ class Settings:
     LLM_MODEL: str = os.getenv("LLM_MODEL", "gpt-4o-search-preview")
     HOST: str = os.getenv("HOST", "0.0.0.0")
     PORT: int = int(os.getenv("PORT", "8000"))
+    ENV: str = os.getenv("ENV", "development")
 
 
 settings = Settings()

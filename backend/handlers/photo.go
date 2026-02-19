@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"windsong/middleware"
 	"windsong/models"
 	"windsong/services"
 )
@@ -69,6 +70,7 @@ func (h *PhotoHandler) GetPhotos(c *gin.Context) {
 	// Get photos
 	response, err := h.photoService.GetPhotos(serviceQuery)
 	if err != nil {
+		middleware.GetLogger(c).Error().Err(err).Msg("failed to fetch photos")
 		Error(c, http.StatusInternalServerError, CodeInternalError, "Failed to fetch photos")
 		return
 	}
@@ -87,6 +89,7 @@ func (h *PhotoHandler) GetPhotos(c *gin.Context) {
 func (h *PhotoHandler) GetFilterOptions(c *gin.Context) {
 	options, err := h.photoService.GetFilterOptions()
 	if err != nil {
+		middleware.GetLogger(c).Error().Err(err).Msg("failed to fetch filter options")
 		Error(c, http.StatusInternalServerError, CodeInternalError, "Failed to fetch filter options")
 		return
 	}
@@ -136,14 +139,8 @@ func (h *PhotoHandler) GetPhoto(c *gin.Context) {
 
 	photo, err := h.photoService.GetPhotoByID(uint(id))
 	if err != nil {
-		Error(c, http.StatusNotFound, CodeNotFound, "Photo not found")
-		return
-	}
-
-	Success(c, photo)
-}
-
-// CreatePhoto godoc
+		middleware.GetLogger(c).Warn().Err(err).Uint64("photo_id", id).Msg("photo not found")
+		Error(c, http.StatusNotFound, CodeNotFound, "Photo not found") godoc
 // @Summary      Create a photo
 // @Description  Creates a new photo entry
 // @Tags         photos
@@ -183,6 +180,7 @@ func (h *PhotoHandler) CreatePhoto(c *gin.Context) {
 	}
 
 	if err := h.photoService.CreatePhoto(photo); err != nil {
+		middleware.GetLogger(c).Error().Err(err).Msg("failed to create photo")
 		Error(c, http.StatusInternalServerError, CodeInternalError, "Failed to create photo")
 		return
 	}
@@ -237,6 +235,7 @@ func (h *PhotoHandler) UpdatePhoto(c *gin.Context) {
 	}
 
 	if err := h.photoService.UpdatePhoto(uint(id), photo); err != nil {
+		middleware.GetLogger(c).Warn().Err(err).Uint64("photo_id", id).Msg("photo not found for update")
 		Error(c, http.StatusNotFound, CodeNotFound, "Photo not found")
 		return
 	}
@@ -266,6 +265,7 @@ func (h *PhotoHandler) DeletePhoto(c *gin.Context) {
 	}
 
 	if err := h.photoService.DeletePhoto(uint(id)); err != nil {
+		middleware.GetLogger(c).Warn().Err(err).Uint64("photo_id", id).Msg("photo not found for delete")
 		Error(c, http.StatusNotFound, CodeNotFound, "Photo not found")
 		return
 	}

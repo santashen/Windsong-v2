@@ -17,7 +17,21 @@
       "Bash(HTTP_PROXY=http://127.0.0.1:7890 HTTPS_PROXY=http://127.0.0.1:7890 go get:*)",
       "Bash(HTTP_PROXY=http://127.0.0.1:7890 HTTPS_PROXY=http://127.0.0.1:7890 npm install:*)",
       "WebFetch(domain:api-gpt-ge.apifox.cn)",
-      "Skill(commit)"
+      "Skill(commit)",
+      "Bash(chmod:*)",
+      "Bash(python3:*)",
+      "Bash(npx vite build)",
+      "Bash(git rm:*)",
+      "Bash(brew install:*)",
+      "Bash(gh auth status:*)",
+      "Bash(find:*)",
+      "Bash(git worktree add:*)",
+      "Bash(git worktree:*)",
+      "Bash(git remote add:*)",
+      "Bash(git fetch:*)",
+      "Bash(git merge:*)",
+      "Bash(git checkout:*)",
+      "Bash(go mod tidy:*)"
     ]
   }
 }

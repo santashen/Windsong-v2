@@ -1,12 +1,11 @@
 package database
 
 import (
-	"log"
-
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
 	"windsong/config"
+	"windsong/logger"
 )
 
 var DB *gorm.DB
@@ -16,9 +15,9 @@ func Init(cfg *config.Config) {
 	var err error
 	DB, err = gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{})
 	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		logger.Log.Fatal().Err(err).Msg("failed to connect to database")
 	}
-	log.Println("Database connected successfully")
+	logger.Log.Info().Msg("database connected successfully")
 }
 
 // GetDB returns the database instance

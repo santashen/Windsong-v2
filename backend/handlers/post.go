@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"windsong/middleware"
 	"windsong/services"
 )
 
@@ -30,6 +31,7 @@ func NewPostHandler(postService *services.PostService) *PostHandler {
 func (h *PostHandler) SyncPosts(c *gin.Context) {
 	result, err := h.postService.SyncPosts()
 	if err != nil {
+		middleware.GetLogger(c).Error().Err(err).Msg("post sync failed")
 		Error(c, http.StatusInternalServerError, CodeInternalError, "Sync failed: "+err.Error())
 		return
 	}
@@ -81,6 +83,7 @@ func (h *PostHandler) GetPosts(c *gin.Context) {
 	// Get posts
 	response, err := h.postService.GetPosts(serviceQuery)
 	if err != nil {
+		middleware.GetLogger(c).Error().Err(err).Msg("failed to fetch posts")
 		Error(c, http.StatusInternalServerError, CodeInternalError, "Failed to fetch posts")
 		return
 	}
@@ -107,6 +110,7 @@ func (h *PostHandler) GetPost(c *gin.Context) {
 
 	post, err := h.postService.GetPostBySlug(slug)
 	if err != nil {
+		middleware.GetLogger(c).Warn().Err(err).Str("slug", slug).Msg("post not found")
 		Error(c, http.StatusNotFound, CodeNotFound, "Post not found")
 		return
 	}

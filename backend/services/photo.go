@@ -8,6 +8,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"windsong/logger"
 	"windsong/models"
 )
 
@@ -202,10 +203,14 @@ func (s *PhotoService) ImportFromJSON(jsonData []byte) error {
 		if err := s.db.Where("url = ?", p.URL).First(&existing).Error; err == nil {
 			// Update existing
 			photo.ID = existing.ID
-			s.db.Save(&photo)
+			if err := s.db.Save(&photo).Error; err != nil {
+				logger.Log.Error().Err(err).Str("url", p.URL).Msg("failed to update photo")
+			}
 		} else {
 			// Create new
-			s.db.Create(&photo)
+			if err := s.db.Create(&photo).Error; err != nil {
+				logger.Log.Error().Err(err).Str("url", p.URL).Msg("failed to create photo")
+			}
 		}
 	}
 

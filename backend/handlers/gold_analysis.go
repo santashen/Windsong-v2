@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"windsong/middleware"
 	"windsong/services"
 )
 
@@ -27,6 +28,7 @@ func NewGoldAnalysisHandler(service *services.GoldAnalysisService) *GoldAnalysis
 func (h *GoldAnalysisHandler) GetTodayAnalysis(c *gin.Context) {
 	analysis, err := h.service.GetTodayAnalysis()
 	if err != nil {
+		middleware.GetLogger(c).Error().Err(err).Msg("failed to get today's gold analysis")
 		Error(c, http.StatusInternalServerError, CodeExternalService, "Failed to get today's analysis: "+err.Error())
 		return
 	}

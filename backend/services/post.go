@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/fs"
-	"log"
 	"math"
 	"os"
 	"os/exec"
@@ -18,6 +17,7 @@ import (
 	"github.com/lib/pq"
 	"gorm.io/gorm"
 
+	"windsong/logger"
 	"windsong/models"
 )
 
@@ -205,22 +205,22 @@ func (s *PostService) gitSync() error {
 	// Check if directory exists
 	if _, err := os.Stat(s.postsDir); os.IsNotExist(err) {
 		// Clone repository
-		log.Printf("Cloning posts repository to %s", s.postsDir)
+		logger.Log.Info().Str("dir", s.postsDir).Msg("cloning posts repository")
 		cmd := exec.Command("git", "clone", "--depth", "1", s.repoURL, s.postsDir)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("git clone failed: %s - %v", string(output), err)
 		}
-		log.Println("Repository cloned successfully")
+		logger.Log.Info().Msg("repository cloned successfully")
 	} else {
 		// Pull latest changes
-		log.Printf("Pulling latest changes in %s", s.postsDir)
+		logger.Log.Info().Str("dir", s.postsDir).Msg("pulling latest changes")
 		cmd := exec.Command("git", "-C", s.postsDir, "pull", "--ff-only")
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("git pull failed: %s - %v", string(output), err)
 		}
-		log.Println("Repository updated successfully")
+		logger.Log.Info().Msg("repository updated successfully")
 	}
 
 	return nil
