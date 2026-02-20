@@ -15,7 +15,7 @@ services:
     networks:
       - windsong-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U windsong"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-windsong}"]
       interval: 10s
       timeout: 5s
       retries: 5
