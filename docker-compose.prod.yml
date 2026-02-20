@@ -44,8 +44,6 @@ services:
     image: ccr.ccs.tencentyun.com/windsong/backend:latest
     container_name: windsong-backend
     restart: always
-    ports:
-      - "127.0.0.1:9080:8080"  # 宿主机 9080 映射到容器 8080
     environment:
       PORT: 8080
       DATABASE_URL: host=postgres user=${DB_USER:-windsong} password=${DB_PASSWORD} dbname=${DB_NAME:-windsong} port=5432 sslmode=disable
@@ -69,7 +67,7 @@ services:
       timeout: 10s
       retries: 3
 
-  # Vue 前端（Nginx 容器）
+  # Vue 前端（Nginx 网关容器）
   frontend:
     image: ccr.ccs.tencentyun.com/windsong/frontend:latest
     container_name: windsong-frontend
