@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(GIT_SEQUENCE_EDITOR=\"cat\" git rebase -i --rebase-merges 92b5754)",
+      "Bash(git stash:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git rebase:*)"
+    ]
+  }
+}
