@@ -1,3 +1,4 @@
+import json
 import time
 import uuid
 from datetime import datetime, timedelta
@@ -52,7 +53,77 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         return response
 
 
+# 错误码映射，与 Go 后端保持一致
+_HTTP_TO_CODE: dict[int, int] = {
+    400: 40000,
+    401: 40100,
+    403: 40100,
+    404: 40400,
+    422: 40001,
+}
+_SKIP_PATHS = {"/health"}
+
+
+class ResponseEnvelopeMiddleware(BaseHTTPMiddleware):
+    """将所有 /api/* JSON 响应包装为统一信封 {code, message, data}。"""
+
+    async def dispatch(self, request: Request, call_next):
+        response: Response = await call_next(request)
+
+        # 健康检查端点保持原始格式（供 Docker/Nginx 基础设施使用）
+        if request.url.path in _SKIP_PATHS:
+            return response
+
+        # 只处理 JSON 响应
+        content_type = response.headers.get("content-type", "")
+        if "application/json" not in content_type:
+            return response
+
+        # 读取流式响应体
+        chunks: list[bytes] = []
+        async for chunk in response.body_iterator:
+            if isinstance(chunk, str):
+                chunk = chunk.encode("utf-8")
+            chunks.append(chunk)
+        body = b"".join(chunks)
+
+        try:
+            original = json.loads(body)
+        except Exception:
+            return Response(
+                content=body,
+                status_code=response.status_code,
+                headers=dict(response.headers),
+                media_type=content_type,
+            )
+
+        status = response.status_code
+
+        if status < 400:
+            envelope = {"code": 0, "message": "success", "data": original}
+        else:
+            code = _HTTP_TO_CODE.get(status, 50000)
+            if isinstance(original, dict) and "detail" in original:
+                detail = original["detail"]
+                message = detail if isinstance(detail, str) else str(detail)
+            else:
+                message = "error"
+            envelope = {"code": code, "message": message}
+
+        new_body = json.dumps(envelope).encode("utf-8")
+        headers = dict(response.headers)
+        headers["content-length"] = str(len(new_body))
+
+        return Response(
+            content=new_body,
+            status_code=status,
+            headers=headers,
+            media_type="application/json",
+        )
+
+
 app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(ResponseEnvelopeMiddleware)
 
 # Initialize services
 llm_service = OpenAICompatibleService(

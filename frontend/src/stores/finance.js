@@ -166,7 +166,7 @@ export const useFinanceStore = defineStore('finance', () => {
         return { ...d, name: item?.name || d.code }
       })
     } catch (err) {
-      error.value = err.response?.data?.detail || 'Failed to fetch data'
+      error.value = err.message || 'Failed to fetch data'
       console.error('Fetch history error:', err)
     } finally {
       isLoading.value = false

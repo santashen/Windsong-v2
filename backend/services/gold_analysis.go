@@ -38,6 +38,14 @@ type AIServiceResponse struct {
 	PromptHash string `json:"promptHash"`
 }
 
+// aiServiceEnvelope is the Python AI service unified response envelope
+type aiServiceEnvelope struct {
+	Code    int                `json:"code"`
+	Message string             `json:"message"`
+	Data    *AIServiceResponse `json:"data"`
+}
+
+
 // GetTodayAnalysis returns today's analysis, fetching from AI service if needed
 func (s *GoldAnalysisService) GetTodayAnalysis() (*models.GoldAnalysis, error) {
 	// Get today's date at midnight (local time)
@@ -97,10 +105,15 @@ func (s *GoldAnalysisService) fetchFromAIService() (*AIServiceResponse, error) {
 		return nil, fmt.Errorf("AI service returned status %d", resp.StatusCode)
 	}
 
-	var result AIServiceResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	var envelope aiServiceEnvelope
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
 		return nil, fmt.Errorf("decode response failed: %w", err)
 	}
-
-	return &result, nil
+	if envelope.Code != 0 {
+		return nil, fmt.Errorf("AI service error (code=%d): %s", envelope.Code, envelope.Message)
+	}
+	if envelope.Data == nil {
+		return nil, fmt.Errorf("AI service returned empty data")
+	}
+	return envelope.Data, nil
 }
