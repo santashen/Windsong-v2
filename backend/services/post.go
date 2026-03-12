@@ -64,11 +64,24 @@ func (g *defaultGitSyncer) Sync(repoURL, postsDir string) error {
 		logger.Log.Info().Msg("repository cloned successfully")
 	} else {
 		logger.Log.Info().Str("dir", postsDir).Msg("pulling latest changes")
-		cmd := exec.Command("git", "-C", postsDir, "pull", "--ff-only")
+		cmd := exec.Command("git", "-C", postsDir, "fetch", "origin")
 		output, err := cmd.CombinedOutput()
 		if err != nil {
-			return fmt.Errorf("git pull failed: %s - %v", string(output), err)
+			return fmt.Errorf("git fetch failed: %w, output: %s", err, output)
 		}
+
+		cmd = exec.Command("git", "-C", postsDir, "reset", "--hard", "origin/develop")
+		output, err = cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("git reset --hard failed: %w, output: %s", err, output)
+		}
+
+		cmd = exec.Command("git", "-C", postsDir, "clean", "-fd")
+		output, err = cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("git clean failed: %w, output: %s", err, output)
+		}
+
 		logger.Log.Info().Msg("repository updated successfully")
 	}
 
