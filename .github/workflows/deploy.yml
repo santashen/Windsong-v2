@@ -24,6 +24,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
       ai-service: ${{ steps.filter.outputs.ai-service }}
+      shared: ${{ steps.filter.outputs.shared }}
       any-changed: ${{ steps.filter.outputs.backend == 'true' || steps.filter.outputs.frontend == 'true' || steps.filter.outputs.ai-service == 'true' || steps.filter.outputs.shared == 'true' }}
     steps:
       - name: Checkout code
@@ -170,6 +171,7 @@ jobs:
   deploy:
     needs: [changes, build-complete]
     runs-on: ubuntu-latest
+    # 每次 push 到 develop 都执行部署；镜像是否重建由前面的变更检测决定
     if: github.ref == 'refs/heads/develop' && needs.build-complete.outputs.success == 'true'
 
     steps:
