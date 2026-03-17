@@ -1,5 +1,5 @@
 <template>
-  <header class="header">
+  <header class="header" :class="{ 'header--transparent': transparent }">
     <div class="container">
       <nav class="nav">
         <router-link to="/" class="logo">
@@ -18,7 +18,12 @@
 </template>
 
 <script setup>
-// Header 组件
+defineProps({
+  transparent: {
+    type: Boolean,
+    default: false,
+  },
+})
 </script>
 
 <style scoped>
@@ -26,6 +31,16 @@
   background: var(--color-bg);
   border-bottom: 1px solid var(--color-border);
   padding: 1rem 0;
+}
+
+.header--transparent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: transparent;
+  border-bottom: none;
 }
 
 .container {
@@ -47,6 +62,10 @@
   text-decoration: none;
 }
 
+.header--transparent .logo {
+  color: rgba(255, 255, 255, 0.9);
+}
+
 .nav-links {
   display: flex;
   list-style: none;
@@ -61,8 +80,17 @@
   transition: color 0.3s;
 }
 
+.header--transparent .nav-links a {
+  color: rgba(255, 255, 255, 0.55);
+}
+
 .nav-links a:hover,
 .nav-links a.router-link-active {
   color: var(--color-primary);
+}
+
+.header--transparent .nav-links a:hover,
+.header--transparent .nav-links a.router-link-active {
+  color: rgba(255, 255, 255, 0.95);
 }
 </style>
