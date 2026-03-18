@@ -16,6 +16,10 @@
           <router-link to="/posts" class="hero-btn hero-btn--filled">进入博客</router-link>
           <router-link to="/gallery" class="hero-btn hero-btn--ghost">看相册</router-link>
         </nav>
+        <p class="hero-archive" :class="{ visible: anim.nav }">
+          旧章：
+          <a href="https://v1.windsong.top" target="_blank" rel="noopener noreferrer">v1.windsong.top</a>
+        </p>
       </div>
 
       <button
@@ -352,6 +356,34 @@ onBeforeUnmount(() => {
   border-color: rgba(255, 255, 255, 0.35);
   background: rgba(255, 255, 255, 0.08);
   transform: translateY(-2px);
+}
+
+.hero-archive {
+  margin: 0.9rem 0 0;
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.52);
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hero-archive.visible {
+  opacity: 1;
+  transform: none;
+}
+
+.hero-archive a {
+  color: rgba(255, 255, 255, 0.72);
+  text-decoration: none;
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.35);
+  transition: color 0.25s ease, border-color 0.25s ease;
+}
+
+.hero-archive a:hover {
+  color: rgba(255, 255, 255, 0.95);
+  border-bottom-color: rgba(255, 255, 255, 0.7);
 }
 
 /* ── scroll indicator ── */
