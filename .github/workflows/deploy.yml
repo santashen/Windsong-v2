@@ -192,9 +192,12 @@ jobs:
     needs: [changes, build-complete]
     runs-on: ubuntu-latest
     # push 到 develop 自动部署；也允许在 Actions 页面手动触发部署
+    # 这里直接依赖 build-complete 的 job 结果，避免 output 字符串比较导致误判被跳过
     if: |
-      (github.event_name == 'push' && github.ref == 'refs/heads/develop' && needs.build-complete.outputs.success == 'true') ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy' && needs.build-complete.outputs.success == 'true')
+      needs.build-complete.result == 'success' && (
+        (github.event_name == 'push' && github.ref == 'refs/heads/develop') ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
+      )
 
     steps:
       - name: Checkout code
