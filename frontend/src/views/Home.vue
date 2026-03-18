@@ -41,9 +41,10 @@ import Header from '@/components/layout/Header.vue'
 const particleCanvas = ref(null)
 const heroRef = ref(null)
 const scrollProgress = ref(0)
+const bgPosition = ref(50) // background-position-y percentage (0-100)
 let frameId = null
 let onResize = null
-let onScroll = null
+let onWheel = null
 
 const anim = reactive({
   title: false,
@@ -59,41 +60,28 @@ const scrollDown = () => {
 
 // ── Scroll-driven styles ──
 const bgStyle = computed(() => {
-  const p = scrollProgress.value
   return {
-    filter: `blur(${p * 8}px) saturate(${1 - p * 0.6})`,
-    transform: `scale(${1 + p * 0.1}) translateY(${p * 30}px)`,
+    backgroundPosition: `center ${bgPosition.value}%`,
   }
 })
 
 const contentStyle = computed(() => {
-  const p = scrollProgress.value
-  return {
-    opacity: 1 - p * 1.5,
-    transform: `translateY(${p * -60}px)`,
-  }
+  return {}
 })
 
 const scrollCueStyle = computed(() => {
-  const p = scrollProgress.value
-  return {
-    opacity: Math.max(0, 1 - p * 3),
-  }
+  return {}
 })
 
 const canvasStyle = computed(() => {
-  const p = scrollProgress.value
-  return {
-    opacity: 1 - p * 1.2,
-  }
+  return {}
 })
 
-// ── Scroll listener ──
-function handleScroll() {
-  if (!heroRef.value) return
-  const heroHeight = heroRef.value.offsetHeight
-  const scrollY = window.scrollY || window.pageYOffset
-  scrollProgress.value = Math.min(Math.max(scrollY / heroHeight, 0), 1)
+// ── Wheel listener for background panning ──
+function handleWheel(e) {
+  e.preventDefault()
+  const delta = e.deltaY * 0.05 // sensitivity
+  bgPosition.value = Math.max(0, Math.min(100, bgPosition.value + delta))
 }
 
 // ── Canvas particle field ──
@@ -114,14 +102,14 @@ function initCanvas() {
   onResize = resize
   window.addEventListener('resize', onResize)
 
-  const N = Math.min(70, Math.floor(window.innerWidth / 18))
+  const N = Math.min(150, Math.floor(window.innerWidth / 10))
   const dots = Array.from({ length: N }, () => ({
     x: Math.random() * window.innerWidth,
     y: Math.random() * window.innerHeight,
-    r: Math.random() * 1.4 + 0.4,
-    dx: (Math.random() - 0.5) * 0.3,
-    dy: (Math.random() - 0.5) * 0.18,
-    a: Math.random() * 0.4 + 0.12,
+    r: Math.random() * 1.8 + 0.3,
+    dx: (Math.random() - 0.5) * 0.4,
+    dy: (Math.random() - 0.5) * 0.25,
+    a: Math.random() * 0.5 + 0.1,
     p: Math.random() * 6.28,
   }))
 
@@ -179,15 +167,18 @@ function entrance() {
 onMounted(() => {
   initCanvas()
   entrance()
-  onScroll = handleScroll
-  window.addEventListener('scroll', onScroll, { passive: true })
-  handleScroll() // initial
+  onWheel = handleWheel
+  if (heroRef.value) {
+    heroRef.value.addEventListener('wheel', onWheel, { passive: false })
+  }
 })
 
 onBeforeUnmount(() => {
   if (frameId) cancelAnimationFrame(frameId)
   if (onResize) window.removeEventListener('resize', onResize)
-  if (onScroll) window.removeEventListener('scroll', onScroll)
+  if (onWheel && heroRef.value) {
+    heroRef.value.removeEventListener('wheel', onWheel)
+  }
   entranceTimers.forEach(clearTimeout)
 })
 </script>
@@ -217,8 +208,11 @@ onBeforeUnmount(() => {
   z-index: 1;
   background-image: url(/background/background.jpg);
   background-size: cover;
-  background-position: center;
-  will-change: transform, filter;
+  background-position: center 50%;
+  filter: blur(0.5px);
+  opacity: 0.85;
+  will-change: background-position;
+  transition: background-position 0.3s ease-out;
 }
 
 /* overlay for text readability */
@@ -230,9 +224,9 @@ onBeforeUnmount(() => {
   pointer-events: none;
   background: linear-gradient(
     180deg,
-    rgba(0, 0, 0, 0.05) 0%,
-    rgba(0, 0, 0, 0.15) 40%,
-    rgba(0, 0, 0, 0.35) 100%
+    rgba(0, 0, 0, 0.1) 0%,
+    rgba(0, 0, 0, 0.2) 40%,
+    rgba(0, 0, 0, 0.4) 100%
   );
 }
 
