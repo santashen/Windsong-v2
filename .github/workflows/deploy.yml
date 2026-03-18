@@ -6,6 +6,23 @@ on:
       - main
       - develop
   workflow_dispatch:
+    inputs:
+      action:
+        description: Manual action to run
+        required: true
+        default: deploy
+        type: choice
+        options:
+          - deploy
+          - build-backend
+          - build-frontend
+          - build-ai-service
+          - build-all
+      deploy_ref:
+        description: Branch to deploy when action is deploy
+        required: false
+        default: develop
+        type: string
 
 env:
   # 1. 更换为腾讯云镜像仓库地址
@@ -54,7 +71,9 @@ jobs:
   build-backend:
     needs: changes
     runs-on: ubuntu-latest
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.shared == 'true'
+    if: |
+      (github.event_name == 'push' && (needs.changes.outputs.backend == 'true' || needs.changes.outputs.shared == 'true')) ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.action == 'build-backend' || github.event.inputs.action == 'build-all'))
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -76,7 +95,6 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.BACKEND_IMAGE }}:latest
-            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
           cache-from: |
             type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.BACKEND_IMAGE }}:buildcache
             type=gha,scope=backend
@@ -88,7 +106,9 @@ jobs:
   build-frontend:
     needs: changes
     runs-on: ubuntu-latest
-    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.shared == 'true'
+    if: |
+      (github.event_name == 'push' && (needs.changes.outputs.frontend == 'true' || needs.changes.outputs.shared == 'true')) ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.action == 'build-frontend' || github.event.inputs.action == 'build-all'))
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -110,7 +130,6 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.FRONTEND_IMAGE }}:latest
-            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
           cache-from: |
             type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.FRONTEND_IMAGE }}:buildcache
             type=gha,scope=frontend
@@ -122,7 +141,9 @@ jobs:
   build-ai-service:
     needs: changes
     runs-on: ubuntu-latest
-    if: needs.changes.outputs.ai-service == 'true' || needs.changes.outputs.shared == 'true'
+    if: |
+      (github.event_name == 'push' && (needs.changes.outputs.ai-service == 'true' || needs.changes.outputs.shared == 'true')) ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.action == 'build-ai-service' || github.event.inputs.action == 'build-all'))
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -144,7 +165,6 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.AI_SERVICE_IMAGE }}:latest
-            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.AI_SERVICE_IMAGE }}:${{ github.sha }}
           cache-from: |
             type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.AI_SERVICE_IMAGE }}:buildcache
             type=gha,scope=ai-service
@@ -171,8 +191,10 @@ jobs:
   deploy:
     needs: [changes, build-complete]
     runs-on: ubuntu-latest
-    # 每次 push 到 develop 都执行部署；镜像是否重建由前面的变更检测决定
-    if: github.ref == 'refs/heads/develop' && needs.build-complete.outputs.success == 'true'
+    # push 到 develop 自动部署；也允许在 Actions 页面手动触发部署
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/develop' && needs.build-complete.outputs.success == 'true') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy' && needs.build-complete.outputs.success == 'true')
 
     steps:
       - name: Checkout code
@@ -186,12 +208,12 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT || 22 }}
           script_stop: true
-          envs: DB_USER,DB_PASSWORD,DB_NAME,TENCENT_USER,TENCENT_PWD,ADMIN_API_KEY,POSTS_REPO_URL,LLM_API_URL,LLM_API_KEY,LLM_MODEL,REGISTRY,NAMESPACE,BACKEND_CHANGED,FRONTEND_CHANGED,AISERVICE_CHANGED
+          envs: DB_USER,DB_PASSWORD,DB_NAME,TENCENT_USER,TENCENT_PWD,ADMIN_API_KEY,POSTS_REPO_URL,LLM_API_URL,LLM_API_KEY,LLM_MODEL,REGISTRY,NAMESPACE,DEPLOY_REF,BACKEND_CHANGED,FRONTEND_CHANGED,AISERVICE_CHANGED
           script: |
             cd /data/web-dockers/Windsong-v2
 
             git fetch origin
-            git reset --hard origin/develop
+            git reset --hard origin/$DEPLOY_REF
 
             # 生成 .env
             echo "DB_USER=$DB_USER" > .env
@@ -246,11 +268,12 @@ jobs:
           TENCENT_PWD: ${{ secrets.TENCENT_CLOUD_PASSWORD }}
           REGISTRY: ${{ env.REGISTRY }}
           NAMESPACE: ${{ env.NAMESPACE }}
+          DEPLOY_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_ref || github.ref_name }}
           ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
           POSTS_REPO_URL: ${{ secrets.POSTS_REPO_URL }}
           LLM_API_URL: ${{ secrets.LLM_API_URL }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_MODEL: ${{ secrets.LLM_MODEL }}
-          BACKEND_CHANGED: ${{ needs.changes.outputs.backend == 'true' || needs.changes.outputs.shared == 'true' }}
-          FRONTEND_CHANGED: ${{ needs.changes.outputs.frontend == 'true' || needs.changes.outputs.shared == 'true' }}
-          AISERVICE_CHANGED: ${{ needs.changes.outputs.ai-service == 'true' || needs.changes.outputs.shared == 'true' }}
+          BACKEND_CHANGED: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy') || needs.changes.outputs.backend == 'true' || needs.changes.outputs.shared == 'true' }}
+          FRONTEND_CHANGED: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy') || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.shared == 'true' }}
+          AISERVICE_CHANGED: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy') || needs.changes.outputs.ai-service == 'true' || needs.changes.outputs.shared == 'true' }}
