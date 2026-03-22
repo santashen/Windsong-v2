@@ -34,7 +34,7 @@
 
 <script setup>
 import { useRoute } from 'vue-router'
-import { PhotoIcon, HomeIcon } from '@/components/icons'
+import { PhotoIcon, HomeIcon, BriefcaseIcon } from '@/components/icons'
 
 defineProps({
   collapsed: Boolean
@@ -45,7 +45,8 @@ defineEmits(['toggle'])
 const route = useRoute()
 
 const menuItems = [
-  { path: '/admin/photos', label: 'Photos', icon: PhotoIcon }
+  { path: '/admin/photos', label: 'Photos', icon: PhotoIcon },
+  { path: '/admin/portfolio', label: 'Portfolio', icon: BriefcaseIcon }
   // Future menu items can be added here:
   // { path: '/admin/posts', label: 'Posts', icon: PostIcon },
   // { path: '/admin/settings', label: 'Settings', icon: SettingsIcon }

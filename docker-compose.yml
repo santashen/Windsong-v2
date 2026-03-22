@@ -6,9 +6,9 @@ services:
     container_name: windsong-db
     restart: always
     environment:
-      POSTGRES_USER: windsong
-      POSTGRES_PASSWORD: windsong123
-      POSTGRES_DB: windsong
+      POSTGRES_USER: ${DB_USER:-windsong}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-windsong123}
+      POSTGRES_DB: ${DB_NAME:-windsong}
     ports:
       - "5432:5432"
     volumes:
@@ -24,9 +24,9 @@ services:
     container_name: windsong-flyway-dev
     command: migrate
     environment:
-      FLYWAY_URL: jdbc:postgresql://postgres:5432/windsong
-      FLYWAY_USER: windsong
-      FLYWAY_PASSWORD: windsong123
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-windsong}
+      FLYWAY_USER: ${DB_USER:-windsong}
+      FLYWAY_PASSWORD: ${DB_PASSWORD:-windsong123}
       FLYWAY_BASELINE_ON_MIGRATE: "true"
       FLYWAY_BASELINE_VERSION: "1"
     volumes:

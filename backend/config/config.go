@@ -8,13 +8,14 @@ import (
 
 // Config holds all configuration for the application
 type Config struct {
-	DatabaseURL  string
-	Port         string
-	Env          string
-	AdminAPIKey  string // API Key for admin operations
-	PostsRepoURL string // Git repository URL for markdown posts
-	PostsDir     string // Local directory to clone/store posts
-	AIServiceURL string // AI service URL for gold analysis
+	DatabaseURL             string
+	Port                    string
+	Env                     string
+	AdminAPIKey             string // API Key for admin operations
+	PortfolioAccessPassword string // Password for family portfolio page
+	PostsRepoURL            string // Git repository URL for markdown posts
+	PostsDir                string // Local directory to clone/store posts
+	AIServiceURL            string // AI service URL for gold analysis
 }
 
 // Load loads configuration from environment variables
@@ -23,13 +24,14 @@ func Load() *Config {
 	_ = godotenv.Load()
 
 	return &Config{
-		DatabaseURL:  getEnv("DATABASE_URL", "host=localhost user=windsong password=windsong123 dbname=windsong port=5432 sslmode=disable"),
-		Port:         getEnv("PORT", "8080"),
-		Env:          getEnv("ENV", "development"),
-		AdminAPIKey:  getEnv("ADMIN_API_KEY", ""), // Set this in production!
-		PostsRepoURL: getEnv("POSTS_REPO_URL", ""),
-		PostsDir:     getEnv("POSTS_DIR", "./data/posts"),
-		AIServiceURL: getEnv("AI_SERVICE_URL", "http://localhost:8000"),
+		DatabaseURL:             getEnv("DATABASE_URL", "host=localhost user=windsong password=windsong123 dbname=windsong port=5432 sslmode=disable"),
+		Port:                    getEnv("PORT", "8080"),
+		Env:                     getEnv("ENV", "development"),
+		AdminAPIKey:             getEnv("ADMIN_API_KEY", ""), // Set this in production!
+		PortfolioAccessPassword: getEnv("PORTFOLIO_ACCESS_PASSWORD", ""),
+		PostsRepoURL:            getEnv("POSTS_REPO_URL", ""),
+		PostsDir:                getEnv("POSTS_DIR", "./data/posts"),
+		AIServiceURL:            getEnv("AI_SERVICE_URL", "http://localhost:8000"),
 	}
 }
 

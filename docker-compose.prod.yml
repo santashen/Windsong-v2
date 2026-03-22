@@ -49,6 +49,7 @@ services:
       DATABASE_URL: host=postgres user=${DB_USER:-windsong} password=${DB_PASSWORD} dbname=${DB_NAME:-windsong} port=5432 sslmode=disable
       ENV: production
       ADMIN_API_KEY: ${ADMIN_API_KEY}
+      PORTFOLIO_ACCESS_PASSWORD: ${PORTFOLIO_ACCESS_PASSWORD}
       POSTS_REPO_URL: ${POSTS_REPO_URL}
       POSTS_DIR: /root/data/posts
       AI_SERVICE_URL: http://ai-service:8000

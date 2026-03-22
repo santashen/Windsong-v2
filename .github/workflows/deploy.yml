@@ -211,7 +211,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT || 22 }}
           script_stop: true
-          envs: DB_USER,DB_PASSWORD,DB_NAME,TENCENT_USER,TENCENT_PWD,ADMIN_API_KEY,POSTS_REPO_URL,LLM_API_URL,LLM_API_KEY,LLM_MODEL,REGISTRY,NAMESPACE,DEPLOY_REF,BACKEND_CHANGED,FRONTEND_CHANGED,AISERVICE_CHANGED
+          envs: DB_USER,DB_PASSWORD,DB_NAME,TENCENT_USER,TENCENT_PWD,ADMIN_API_KEY,PORTFOLIO_ACCESS_PASSWORD,POSTS_REPO_URL,LLM_API_URL,LLM_API_KEY,LLM_MODEL,REGISTRY,NAMESPACE,DEPLOY_REF,BACKEND_CHANGED,FRONTEND_CHANGED,AISERVICE_CHANGED
           script: |
             cd /data/web-dockers/Windsong-v2
 
@@ -223,6 +223,7 @@ jobs:
             echo "DB_PASSWORD=$DB_PASSWORD" >> .env
             echo "DB_NAME=$DB_NAME" >> .env
             echo "ADMIN_API_KEY=$ADMIN_API_KEY" >> .env
+            echo "PORTFOLIO_ACCESS_PASSWORD=$PORTFOLIO_ACCESS_PASSWORD" >> .env
             echo "POSTS_REPO_URL=$POSTS_REPO_URL" >> .env
             echo "LLM_API_URL=$LLM_API_URL" >> .env
             echo "LLM_API_KEY=$LLM_API_KEY" >> .env
@@ -273,6 +274,7 @@ jobs:
           NAMESPACE: ${{ env.NAMESPACE }}
           DEPLOY_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_ref || github.ref_name }}
           ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+          PORTFOLIO_ACCESS_PASSWORD: ${{ secrets.PORTFOLIO_ACCESS_PASSWORD }}
           POSTS_REPO_URL: ${{ secrets.POSTS_REPO_URL }}
           LLM_API_URL: ${{ secrets.LLM_API_URL }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}

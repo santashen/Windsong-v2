@@ -26,3 +26,9 @@ type PhotoServiceInterface interface {
 type GoldAnalysisServiceInterface interface {
 	GetTodayAnalysis() (*models.GoldAnalysis, error)
 }
+
+// PortfolioServiceInterface defines the contract handlers need from PortfolioService.
+type PortfolioServiceInterface interface {
+	CreateSnapshot(snapshot *models.PortfolioSnapshot) error
+	GetLatestSnapshot() (*models.PortfolioSnapshot, error)
+}

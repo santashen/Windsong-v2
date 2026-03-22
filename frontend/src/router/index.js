@@ -8,11 +8,13 @@ import Services from '@/views/Services.vue'
 import GoldAnalysis from '@/views/GoldAnalysis.vue'
 import Monitor from '@/views/Monitor.vue'
 import FinanceView from '@/views/FinanceView.vue'
+import PortfolioView from '@/views/PortfolioView.vue'
 
 // Admin views (lazy loaded)
 const AdminLayout = () => import('@/views/admin/AdminLayout.vue')
 const AdminLogin = () => import('@/views/admin/Login.vue')
 const AdminPhotos = () => import('@/views/admin/Photos.vue')
+const AdminPortfolio = () => import('@/views/admin/Portfolio.vue')
 
 const routes = [
   {
@@ -60,6 +62,11 @@ const routes = [
     name: 'Finance',
     component: FinanceView
   },
+  {
+    path: '/portfolio',
+    name: 'Portfolio',
+    component: PortfolioView
+  },
   // Admin routes
   {
     path: '/admin/login',
@@ -80,6 +87,11 @@ const routes = [
         path: 'photos',
         name: 'AdminPhotos',
         component: AdminPhotos
+      },
+      {
+        path: 'portfolio',
+        name: 'AdminPortfolio',
+        component: AdminPortfolio
       }
       // Future admin routes can be added here
     ]
