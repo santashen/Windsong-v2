@@ -163,3 +163,20 @@ export const ChevronRightIcon = () => h('svg', {
 }, [
   h('polyline', { points: '9 18 15 12 9 6' })
 ])
+
+// Briefcase icon
+export const BriefcaseIcon = () => h('svg', {
+  xmlns: 'http://www.w3.org/2000/svg',
+  width: '20',
+  height: '20',
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  'stroke-width': '2',
+  'stroke-linecap': 'round',
+  'stroke-linejoin': 'round'
+}, [
+  h('rect', { x: '2', y: '7', width: '20', height: '14', rx: '2', ry: '2' }),
+  h('path', { d: 'M16 21V5a2 2 0 0 0-2-2H10a2 2 0 0 0-2 2v16' }),
+  h('path', { d: 'M2 12h20' })
+])
