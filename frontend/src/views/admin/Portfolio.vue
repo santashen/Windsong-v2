@@ -56,30 +56,57 @@
         <div class="section-heading">
           <div>
             <h2>区块 A: 宽基 / 行业 ETF</h2>
-            <p>展示名称、持仓占比、平均买入成本、当前参考价格。</p>
+            <p>围绕 预期年分红 = 持有份数 × 每份派息 录入 ETF 持仓，强调份额积累与现金流产出。</p>
           </div>
           <button class="secondary-btn" type="button" @click="addEtf">添加 ETF</button>
         </div>
 
         <div class="rows-stack">
           <div v-for="(etf, index) in form.holdings.etfs" :key="`etf-${index}`" class="holding-row">
-            <div class="row-grid">
-              <label class="field">
-                <span>标的名称</span>
-                <input v-model.trim="etf.name" type="text" required />
-              </label>
-              <label class="field">
-                <span>持仓占比 (%)</span>
-                <input v-model.number="etf.weightPct" type="number" min="0" max="100" step="0.01" required />
-              </label>
-              <label class="field">
-                <span>平均买入成本</span>
-                <input v-model.number="etf.averageCost" type="number" min="0" step="0.01" required />
-              </label>
-              <label class="field">
-                <span>当前参考价格</span>
-                <input v-model.number="etf.currentReferencePrice" type="number" min="0" step="0.01" required />
-              </label>
+            <div class="company-block">
+              <div class="ownership-note">
+                预期年分红 = 持有份数 × 每份派息，持仓股息率 = 每份派息 ÷ 平均买入成本
+              </div>
+
+              <div class="row-grid etf-grid etf-grid--top">
+                <label class="field">
+                  <span>标的名称</span>
+                  <input v-model.trim="etf.name" type="text" required />
+                </label>
+                <label class="field">
+                  <span>持仓占比 (%)</span>
+                  <input v-model.number="etf.weightPct" type="number" min="0" max="100" step="0.01" required />
+                </label>
+                <label class="field">
+                  <span>当前参考价格</span>
+                  <input v-model.number="etf.currentReferencePrice" type="number" min="0" step="0.01" required />
+                </label>
+              </div>
+
+              <div class="divider"></div>
+
+              <div class="row-grid etf-grid etf-grid--formula">
+                <label class="field">
+                  <span>持有份数</span>
+                  <input v-model.number="etf.shares" type="number" min="0" step="1" required />
+                </label>
+                <label class="field">
+                  <span>平均买入成本</span>
+                  <input v-model.number="etf.averageCost" type="number" min="0" step="0.01" required />
+                </label>
+                <label class="field">
+                  <span>每份派息</span>
+                  <input v-model.number="etf.dividendPerShare" type="number" min="0" step="0.01" required />
+                </label>
+                <label class="field">
+                  <span>预期年分红</span>
+                  <input :value="formatNumber(etfAnnualDividend(etf))" type="number" step="0.01" readonly />
+                </label>
+                <label class="field">
+                  <span>持仓股息率 (%)</span>
+                  <input :value="formatNumber(etfYieldOnCost(etf))" type="number" step="0.01" readonly />
+                </label>
+              </div>
             </div>
             <button
               class="danger-btn"
@@ -97,43 +124,84 @@
         <div class="section-heading">
           <div>
             <h2>区块 B: 优秀企业</h2>
-            <p>展示企业名称、ROE、估值状态、平均持仓成本、持仓股息率、当前股息率。</p>
+            <p>围绕 分红 = 股数 × EPS × 派息率 录入和展示企业分红能力与我们的所有权。</p>
           </div>
           <button class="secondary-btn" type="button" @click="addCompany">添加企业</button>
         </div>
 
         <div class="rows-stack">
           <div v-for="(company, index) in form.holdings.companies" :key="`company-${index}`" class="holding-row">
-            <div class="row-grid company-grid">
-              <label class="field">
-                <span>企业名称</span>
-                <input v-model.trim="company.name" type="text" required />
-              </label>
-              <label class="field">
-                <span>ROE (%)</span>
-                <input v-model.number="company.roePct" type="number" min="0" max="100" step="0.01" required />
-              </label>
-              <label class="field">
-                <span>估值状态</span>
-                <select v-model="company.valuationStatus" required>
-                  <option value="undervalued">低估</option>
-                  <option value="fair">合理</option>
-                  <option value="overvalued">高估</option>
-                </select>
-              </label>
-              <label class="field">
-                <span>平均持仓成本</span>
-                <input v-model.number="company.averageCost" type="number" min="0" step="0.01" required />
-              </label>
-              <label class="field">
-                <span>持仓股息率 (%)</span>
-                <input v-model.number="company.holdingDividendYieldPct" type="number" min="0" step="0.01" required />
-              </label>
-              <label class="field">
-                <span>当前股息率 (%)</span>
-                <input v-model.number="company.currentDividendYieldPct" type="number" min="0" step="0.01" required />
-              </label>
+            <div class="company-block">
+              <div class="row-grid company-grid company-grid--top">
+                <label class="field">
+                  <span>企业名称</span>
+                  <input v-model.trim="company.name" type="text" required />
+                </label>
+                <label class="field">
+                  <span>估值状态</span>
+                  <select v-model="company.valuationStatus" required>
+                    <option value="undervalued">低估</option>
+                    <option value="fair">合理</option>
+                    <option value="overvalued">高估</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>当前股价</span>
+                  <input v-model.number="company.currentPrice" type="number" min="0" step="0.01" required />
+                </label>
+              </div>
+
+              <div class="divider"></div>
+
+              <div class="ownership-note">
+                分红 = 持有股数 × 每股收益(EPS) × 派息率
+              </div>
+
+              <div class="row-grid company-grid company-grid--formula">
+                <label class="field">
+                  <span>持有股数</span>
+                  <input v-model.number="company.shares" type="number" min="0" step="1" required />
+                </label>
+                <label class="field">
+                  <span>每股收益 EPS</span>
+                  <input v-model.number="company.eps" type="number" min="0" step="0.01" required />
+                </label>
+                <label class="field">
+                  <span>派息率 (%)</span>
+                  <input v-model.number="company.payoutRatio" type="number" min="0" max="100" step="0.01" required />
+                </label>
+                <label class="field">
+                  <span>每股分红 DPS</span>
+                  <input :value="formatNumber(companyDps(company))" type="number" step="0.01" readonly />
+                </label>
+                <label class="field">
+                  <span>预期年分红</span>
+                  <input :value="formatNumber(companyAnnualDividend(company))" type="number" step="0.01" readonly />
+                </label>
+              </div>
+
+              <div class="divider"></div>
+
+              <div class="row-grid company-grid company-grid--quality">
+                <label class="field">
+                  <span>平均持仓成本</span>
+                  <input v-model.number="company.averageCost" type="number" min="0" step="0.01" required />
+                </label>
+                <label class="field">
+                  <span>当前股价</span>
+                  <input v-model.number="company.currentPrice" type="number" min="0" step="0.01" required />
+                </label>
+                <label class="field">
+                  <span>持仓股息率 (%)</span>
+                  <input v-model.number="company.holdingDividendYieldPct" type="number" min="0" step="0.01" required />
+                </label>
+                <label class="field">
+                  <span>当前股息率 (%)</span>
+                  <input v-model.number="company.currentDividendYieldPct" type="number" min="0" step="0.01" required />
+                </label>
+              </div>
             </div>
+
             <button
               class="danger-btn"
               type="button"
@@ -165,7 +233,9 @@ function createEtf() {
   return {
     name: '',
     weightPct: 0,
+    shares: 0,
     averageCost: 0,
+    dividendPerShare: 0,
     currentReferencePrice: 0
   }
 }
@@ -173,9 +243,12 @@ function createEtf() {
 function createCompany() {
   return {
     name: '',
-    roePct: 0,
     valuationStatus: 'fair',
+    shares: 0,
+    eps: 0,
+    payoutRatio: 0,
     averageCost: 0,
+    currentPrice: 0,
     holdingDividendYieldPct: 0,
     currentDividendYieldPct: 0
   }
@@ -226,6 +299,32 @@ function removeCompany(index) {
   form.holdings.companies.splice(index, 1)
 }
 
+function roundToTwo(value) {
+  return Number((Number(value || 0)).toFixed(2))
+}
+
+function companyDps(company) {
+  return roundToTwo((Number(company.eps || 0) * Number(company.payoutRatio || 0)) / 100)
+}
+
+function companyAnnualDividend(company) {
+  return roundToTwo(Number(company.shares || 0) * companyDps(company))
+}
+
+function etfAnnualDividend(etf) {
+  return roundToTwo(Number(etf.shares || 0) * Number(etf.dividendPerShare || 0))
+}
+
+function etfYieldOnCost(etf) {
+  const averageCost = Number(etf.averageCost || 0)
+  if (!averageCost) return 0
+  return roundToTwo((Number(etf.dividendPerShare || 0) / averageCost) * 100)
+}
+
+function formatNumber(value) {
+  return Number(value || 0).toFixed(2)
+}
+
 function buildPayload() {
   return {
     recordDate: form.recordDate,
@@ -239,14 +338,23 @@ function buildPayload() {
       etfs: form.holdings.etfs.map(item => ({
         name: item.name.trim(),
         weightPct: Number(item.weightPct),
+        shares: Number(item.shares),
         averageCost: Number(item.averageCost),
+        dividendPerShare: roundToTwo(item.dividendPerShare),
+        expectedAnnualDividend: etfAnnualDividend(item),
+        yieldOnCost: etfYieldOnCost(item),
         currentReferencePrice: Number(item.currentReferencePrice)
       })),
       companies: form.holdings.companies.map(item => ({
         name: item.name.trim(),
-        roePct: Number(item.roePct),
         valuationStatus: item.valuationStatus,
+        shares: Number(item.shares),
+        eps: roundToTwo(item.eps),
+        payoutRatio: Number(item.payoutRatio),
+        dps: companyDps(item),
+        expectedAnnualDividend: companyAnnualDividend(item),
         averageCost: Number(item.averageCost),
+        currentPrice: Number(item.currentPrice),
         holdingDividendYieldPct: Number(item.holdingDividendYieldPct),
         currentDividendYieldPct: Number(item.currentDividendYieldPct)
       }))
@@ -351,6 +459,14 @@ async function handleSubmit() {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.etf-grid--formula {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.company-grid--formula {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -383,6 +499,12 @@ async function handleSubmit() {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
+.field input[readonly] {
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+  font-weight: 700;
+}
+
 .field-full {
   margin-top: 1rem;
 }
@@ -395,6 +517,23 @@ async function handleSubmit() {
 
 .holding-row {
   padding: 1rem;
+}
+
+.company-block {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.divider {
+  height: 1px;
+  background: var(--color-border);
+}
+
+.ownership-note {
+  font-size: 0.88rem;
+  color: var(--color-primary);
+  font-weight: 600;
 }
 
 .secondary-btn,
@@ -455,10 +594,19 @@ async function handleSubmit() {
   color: var(--color-danger);
 }
 
+@media (max-width: 1200px) {
+  .etf-grid--formula,
+  .company-grid--formula {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 1024px) {
   .form-grid,
   .row-grid,
-  .company-grid {
+  .company-grid,
+  .etf-grid--formula,
+  .company-grid--formula {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -473,7 +621,9 @@ async function handleSubmit() {
 
   .form-grid,
   .row-grid,
-  .company-grid {
+  .company-grid,
+  .etf-grid--formula,
+  .company-grid--formula {
     grid-template-columns: 1fr;
   }
 }

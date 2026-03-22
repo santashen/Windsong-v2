@@ -62,18 +62,27 @@ type PortfolioHoldingsInput struct {
 
 // PortfolioETFHoldingInput is one ETF row submitted by admin.
 type PortfolioETFHoldingInput struct {
-	Name                  string  `json:"name" binding:"required,max=200"`
-	WeightPct             float64 `json:"weightPct" binding:"required,gte=0,lte=100"`
-	AverageCost           float64 `json:"averageCost" binding:"required,gte=0"`
-	CurrentReferencePrice float64 `json:"currentReferencePrice" binding:"required,gte=0"`
+	Name                   string  `json:"name" binding:"required,max=200"`
+	WeightPct              float64 `json:"weightPct" binding:"required,gte=0,lte=100"`
+	Shares                 int     `json:"shares" binding:"required,gte=0"`
+	AverageCost            float64 `json:"averageCost" binding:"required,gte=0"`
+	DividendPerShare       float64 `json:"dividendPerShare" binding:"required,gte=0"`
+	ExpectedAnnualDividend float64 `json:"expectedAnnualDividend" binding:"required,gte=0"`
+	YieldOnCost            float64 `json:"yieldOnCost" binding:"required,gte=0"`
+	CurrentReferencePrice  float64 `json:"currentReferencePrice" binding:"required,gte=0"`
 }
 
 // PortfolioCompanyHoldingInput is one company row submitted by admin.
 type PortfolioCompanyHoldingInput struct {
 	Name                    string  `json:"name" binding:"required,max=200"`
-	ROEPct                  float64 `json:"roePct" binding:"required,gte=0,lte=100"`
 	ValuationStatus         string  `json:"valuationStatus" binding:"required,oneof=undervalued fair overvalued"`
+	Shares                  int     `json:"shares" binding:"required,gte=0"`
+	EPS                     float64 `json:"eps" binding:"required,gte=0"`
+	PayoutRatioPct          float64 `json:"payoutRatio" binding:"required,gte=0,lte=100"`
+	DPS                     float64 `json:"dps" binding:"required,gte=0"`
+	ExpectedAnnualDividend  float64 `json:"expectedAnnualDividend" binding:"required,gte=0"`
 	AverageCost             float64 `json:"averageCost" binding:"required,gte=0"`
+	CurrentPrice            float64 `json:"currentPrice" binding:"required,gte=0"`
 	HoldingDividendYieldPct float64 `json:"holdingDividendYieldPct" binding:"required,gte=0"`
 	CurrentDividendYieldPct float64 `json:"currentDividendYieldPct" binding:"required,gte=0"`
 }
@@ -104,19 +113,28 @@ func (h *PortfolioHandler) CreateSnapshot(c *gin.Context) {
 
 	for _, etf := range input.Holdings.ETFs {
 		snapshot.Holdings.ETFs = append(snapshot.Holdings.ETFs, models.PortfolioETFHolding{
-			Name:                  etf.Name,
-			WeightPct:             etf.WeightPct,
-			AverageCost:           etf.AverageCost,
-			CurrentReferencePrice: etf.CurrentReferencePrice,
+			Name:                   etf.Name,
+			WeightPct:              etf.WeightPct,
+			Shares:                 etf.Shares,
+			AverageCost:            etf.AverageCost,
+			DividendPerShare:       etf.DividendPerShare,
+			ExpectedAnnualDividend: etf.ExpectedAnnualDividend,
+			YieldOnCost:            etf.YieldOnCost,
+			CurrentReferencePrice:  etf.CurrentReferencePrice,
 		})
 	}
 
 	for _, company := range input.Holdings.Companies {
 		snapshot.Holdings.Companies = append(snapshot.Holdings.Companies, models.PortfolioCompanyHolding{
 			Name:                    company.Name,
-			ROEPct:                  company.ROEPct,
 			ValuationStatus:         models.ValuationStatus(company.ValuationStatus),
+			Shares:                  company.Shares,
+			EPS:                     company.EPS,
+			PayoutRatioPct:          company.PayoutRatioPct,
+			DPS:                     company.DPS,
+			ExpectedAnnualDividend:  company.ExpectedAnnualDividend,
 			AverageCost:             company.AverageCost,
+			CurrentPrice:            company.CurrentPrice,
 			HoldingDividendYieldPct: company.HoldingDividendYieldPct,
 			CurrentDividendYieldPct: company.CurrentDividendYieldPct,
 		})

@@ -61,18 +61,27 @@ func (h *PortfolioHoldings) Scan(value interface{}) error {
 
 // PortfolioETFHolding is one ETF or fund position in the public report.
 type PortfolioETFHolding struct {
-	Name                  string  `json:"name"`
-	WeightPct             float64 `json:"weightPct"`
-	AverageCost           float64 `json:"averageCost"`
-	CurrentReferencePrice float64 `json:"currentReferencePrice"`
+	Name                   string  `json:"name"`
+	WeightPct              float64 `json:"weightPct"`
+	Shares                 int     `json:"shares"`
+	AverageCost            float64 `json:"averageCost"`
+	DividendPerShare       float64 `json:"dividendPerShare"`
+	ExpectedAnnualDividend float64 `json:"expectedAnnualDividend"`
+	YieldOnCost            float64 `json:"yieldOnCost"`
+	CurrentReferencePrice  float64 `json:"currentReferencePrice"`
 }
 
 // PortfolioCompanyHolding is one business ownership position in the public report.
 type PortfolioCompanyHolding struct {
 	Name                    string          `json:"name"`
-	ROEPct                  float64         `json:"roePct"`
 	ValuationStatus         ValuationStatus `json:"valuationStatus"`
+	Shares                  int             `json:"shares"`
+	EPS                     float64         `json:"eps"`
+	PayoutRatioPct          float64         `json:"payoutRatio"`
+	DPS                     float64         `json:"dps"`
+	ExpectedAnnualDividend  float64         `json:"expectedAnnualDividend"`
 	AverageCost             float64         `json:"averageCost"`
+	CurrentPrice            float64         `json:"currentPrice"`
 	HoldingDividendYieldPct float64         `json:"holdingDividendYieldPct"`
 	CurrentDividendYieldPct float64         `json:"currentDividendYieldPct"`
 }
