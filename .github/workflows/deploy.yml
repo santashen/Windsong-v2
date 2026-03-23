@@ -172,29 +172,13 @@ jobs:
             type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.AI_SERVICE_IMAGE }}:buildcache,mode=max
             type=gha,scope=ai-service,mode=max
 
-  # 等待所有构建完成（用于传递状态给 deploy job）
-  build-complete:
+  deploy:
     needs: [changes, build-backend, build-frontend, build-ai-service]
     runs-on: ubuntu-latest
-    if: always()
-    outputs:
-      success: ${{ !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
-    steps:
-      - name: Verify build status
-        run: |
-          if [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" = "true" ]; then
-            echo "Build failed or cancelled"
-            exit 1
-          fi
-          echo "All builds succeeded"
-
-  deploy:
-    needs: [changes, build-complete]
-    runs-on: ubuntu-latest
     # push 到 develop 自动部署；也允许在 Actions 页面手动触发部署
-    # 这里直接依赖 build-complete 的 job 结果，避免 output 字符串比较导致误判被跳过
+    # 条件：(1) 有任何 build 成功或被 skip（意味着没有失败），(2) 是 develop push 或 manual dispatch deploy
     if: |
-      needs.build-complete.result == 'success' && (
+      !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && (
         (github.event_name == 'push' && github.ref == 'refs/heads/develop') ||
         (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
       )
