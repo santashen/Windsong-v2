@@ -45,11 +45,11 @@ type VerifyPortfolioAccessResponse struct {
 // PortfolioSnapshotInput is the input for creating a new portfolio snapshot.
 type PortfolioSnapshotInput struct {
 	RecordDate                  string                 `json:"recordDate" binding:"required,datetime=2006-01-02"`
-	TotalPrincipal              float64                `json:"totalPrincipal" binding:"required,gte=0"`
-	TotalMarketValue            float64                `json:"totalMarketValue" binding:"required,gte=0"`
-	ExpectedAnnualDividends     float64                `json:"expectedAnnualDividends" binding:"required,gte=0"`
-	PortfolioDividendYieldPct   float64                `json:"portfolioDividendYieldPct" binding:"required,gte=0"`
-	MarketValueDividendYieldPct float64                `json:"marketValueDividendYieldPct" binding:"required,gte=0"`
+	TotalPrincipal              float64                `json:"totalPrincipal" binding:"gte=0"`
+	TotalMarketValue            float64                `json:"totalMarketValue" binding:"gte=0"`
+	ExpectedAnnualDividends     float64                `json:"expectedAnnualDividends" binding:"gte=0"`
+	PortfolioDividendYieldPct   float64                `json:"portfolioDividendYieldPct" binding:"gte=0"`
+	MarketValueDividendYieldPct float64                `json:"marketValueDividendYieldPct" binding:"gte=0"`
 	ManagerComment              string                 `json:"managerComment" binding:"max=5000"`
 	Holdings                    PortfolioHoldingsInput `json:"holdings" binding:"required"`
 }
@@ -63,28 +63,28 @@ type PortfolioHoldingsInput struct {
 // PortfolioETFHoldingInput is one ETF row submitted by admin.
 type PortfolioETFHoldingInput struct {
 	Name                   string  `json:"name" binding:"required,max=200"`
-	WeightPct              float64 `json:"weightPct" binding:"required,gte=0,lte=100"`
-	Shares                 int     `json:"shares" binding:"required,gte=0"`
-	AverageCost            float64 `json:"averageCost" binding:"required,gte=0"`
-	DividendPerShare       float64 `json:"dividendPerShare" binding:"required,gte=0"`
-	ExpectedAnnualDividend float64 `json:"expectedAnnualDividend" binding:"required,gte=0"`
-	YieldOnCost            float64 `json:"yieldOnCost" binding:"required,gte=0"`
-	CurrentReferencePrice  float64 `json:"currentReferencePrice" binding:"required,gte=0"`
+	WeightPct              float64 `json:"weightPct" binding:"gte=0,lte=100"`
+	Shares                 int     `json:"shares" binding:"gte=0"`
+	AverageCost            float64 `json:"averageCost" binding:"gte=0"`
+	DividendPerShare       float64 `json:"dividendPerShare" binding:"gte=0"`
+	ExpectedAnnualDividend float64 `json:"expectedAnnualDividend" binding:"gte=0"`
+	YieldOnCost            float64 `json:"yieldOnCost" binding:"gte=0"`
+	CurrentReferencePrice  float64 `json:"currentReferencePrice" binding:"gte=0"`
 }
 
 // PortfolioCompanyHoldingInput is one company row submitted by admin.
 type PortfolioCompanyHoldingInput struct {
 	Name                    string  `json:"name" binding:"required,max=200"`
 	ValuationStatus         string  `json:"valuationStatus" binding:"required,oneof=undervalued fair overvalued"`
-	Shares                  int     `json:"shares" binding:"required,gte=0"`
-	EPS                     float64 `json:"eps" binding:"required,gte=0"`
-	PayoutRatioPct          float64 `json:"payoutRatio" binding:"required,gte=0,lte=100"`
-	DPS                     float64 `json:"dps" binding:"required,gte=0"`
-	ExpectedAnnualDividend  float64 `json:"expectedAnnualDividend" binding:"required,gte=0"`
-	AverageCost             float64 `json:"averageCost" binding:"required,gte=0"`
-	CurrentPrice            float64 `json:"currentPrice" binding:"required,gte=0"`
-	HoldingDividendYieldPct float64 `json:"holdingDividendYieldPct" binding:"required,gte=0"`
-	CurrentDividendYieldPct float64 `json:"currentDividendYieldPct" binding:"required,gte=0"`
+	Shares                  int     `json:"shares" binding:"gte=0"`
+	EPS                     float64 `json:"eps" binding:"gte=0"`
+	PayoutRatioPct          float64 `json:"payoutRatio" binding:"gte=0,lte=100"`
+	DPS                     float64 `json:"dps" binding:"gte=0"`
+	ExpectedAnnualDividend  float64 `json:"expectedAnnualDividend" binding:"gte=0"`
+	AverageCost             float64 `json:"averageCost" binding:"gte=0"`
+	CurrentPrice            float64 `json:"currentPrice" binding:"gte=0"`
+	HoldingDividendYieldPct float64 `json:"holdingDividendYieldPct" binding:"gte=0"`
+	CurrentDividendYieldPct float64 `json:"currentDividendYieldPct" binding:"gte=0"`
 }
 
 // CreateSnapshot creates a new historical portfolio snapshot.

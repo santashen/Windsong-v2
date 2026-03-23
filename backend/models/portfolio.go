@@ -20,9 +20,9 @@ const (
 type PortfolioSnapshot struct {
 	ID                          uint              `gorm:"primaryKey" json:"id"`
 	RecordDate                  time.Time         `gorm:"type:date;not null;index" json:"recordDate"`
-	TotalPrincipal              float64           `gorm:"type:numeric(18,2);not null" json:"totalPrincipal"`
-	TotalMarketValue            float64           `gorm:"type:numeric(18,2);not null" json:"totalMarketValue"`
-	ExpectedAnnualDividends     float64           `gorm:"type:numeric(18,2);not null" json:"expectedAnnualDividends"`
+	TotalPrincipal              float64           `gorm:"type:numeric(18,4);not null" json:"totalPrincipal"`
+	TotalMarketValue            float64           `gorm:"type:numeric(18,4);not null" json:"totalMarketValue"`
+	ExpectedAnnualDividends     float64           `gorm:"type:numeric(18,4);not null" json:"expectedAnnualDividends"`
 	PortfolioDividendYieldPct   float64           `gorm:"type:numeric(8,4);not null" json:"portfolioDividendYieldPct"`
 	MarketValueDividendYieldPct float64           `gorm:"type:numeric(8,4);not null" json:"marketValueDividendYieldPct"`
 	ManagerComment              string            `json:"managerComment"`

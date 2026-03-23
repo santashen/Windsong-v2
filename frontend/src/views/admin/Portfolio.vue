@@ -23,23 +23,23 @@
           </label>
           <label class="field">
             <span>总本金</span>
-            <input v-model.number="form.totalPrincipal" type="number" min="0" step="0.01" required />
+            <input v-model.number="form.totalPrincipal" type="number" min="0" step="0.0001" required />
           </label>
           <label class="field">
             <span>当前总市值</span>
-            <input v-model.number="form.totalMarketValue" type="number" min="0" step="0.01" required />
+            <input v-model.number="form.totalMarketValue" type="number" min="0" step="0.0001" required />
           </label>
           <label class="field">
             <span>预期年度总股息</span>
-            <input v-model.number="form.expectedAnnualDividends" type="number" min="0" step="0.01" required />
+            <input v-model.number="form.expectedAnnualDividends" type="number" min="0" step="0.0001" required />
           </label>
           <label class="field">
             <span>整体持仓股息率 (%)</span>
-            <input v-model.number="form.portfolioDividendYieldPct" type="number" min="0" step="0.01" required />
+            <input v-model.number="form.portfolioDividendYieldPct" type="number" min="0" step="0.0001" required />
           </label>
           <label class="field">
             <span>当前市值股息率 (%)</span>
-            <input v-model.number="form.marketValueDividendYieldPct" type="number" min="0" step="0.01" required />
+            <input v-model.number="form.marketValueDividendYieldPct" type="number" min="0" step="0.0001" required />
           </label>
         </div>
         <label class="field field-full">
@@ -75,11 +75,11 @@
                 </label>
                 <label class="field">
                   <span>持仓占比 (%)</span>
-                  <input v-model.number="etf.weightPct" type="number" min="0" max="100" step="0.01" required />
+                  <input v-model.number="etf.weightPct" type="number" min="0" max="100" step="0.0001" required />
                 </label>
                 <label class="field">
                   <span>当前参考价格</span>
-                  <input v-model.number="etf.currentReferencePrice" type="number" min="0" step="0.01" required />
+                  <input v-model.number="etf.currentReferencePrice" type="number" min="0" step="0.0001" required />
                 </label>
               </div>
 
@@ -92,19 +92,19 @@
                 </label>
                 <label class="field">
                   <span>平均买入成本</span>
-                  <input v-model.number="etf.averageCost" type="number" min="0" step="0.01" required />
+                  <input v-model.number="etf.averageCost" type="number" min="0" step="0.0001" required />
                 </label>
                 <label class="field">
                   <span>每份派息</span>
-                  <input v-model.number="etf.dividendPerShare" type="number" min="0" step="0.01" required />
+                  <input v-model.number="etf.dividendPerShare" type="number" min="0" step="0.0001" required />
                 </label>
                 <label class="field">
                   <span>预期年分红</span>
-                  <input :value="formatNumber(etfAnnualDividend(etf))" type="number" step="0.01" readonly />
+                  <input :value="formatNumber(etfAnnualDividend(etf))" type="number" step="0.0001" readonly />
                 </label>
                 <label class="field">
                   <span>持仓股息率 (%)</span>
-                  <input :value="formatNumber(etfYieldOnCost(etf))" type="number" step="0.01" readonly />
+                  <input :value="formatNumber(etfYieldOnCost(etf))" type="number" step="0.0001" readonly />
                 </label>
               </div>
             </div>
@@ -147,7 +147,7 @@
                 </label>
                 <label class="field">
                   <span>当前股价</span>
-                  <input v-model.number="company.currentPrice" type="number" min="0" step="0.01" required />
+                  <input v-model.number="company.currentPrice" type="number" min="0" step="0.0001" required />
                 </label>
               </div>
 
@@ -164,19 +164,19 @@
                 </label>
                 <label class="field">
                   <span>每股收益 EPS</span>
-                  <input v-model.number="company.eps" type="number" min="0" step="0.01" required />
+                  <input v-model.number="company.eps" type="number" min="0" step="0.0001" required />
                 </label>
                 <label class="field">
                   <span>派息率 (%)</span>
-                  <input v-model.number="company.payoutRatio" type="number" min="0" max="100" step="0.01" required />
+                  <input v-model.number="company.payoutRatio" type="number" min="0" max="100" step="0.0001" required />
                 </label>
                 <label class="field">
                   <span>每股分红 DPS</span>
-                  <input :value="formatNumber(companyDps(company))" type="number" step="0.01" readonly />
+                  <input :value="formatNumber(companyDps(company))" type="number" step="0.0001" readonly />
                 </label>
                 <label class="field">
                   <span>预期年分红</span>
-                  <input :value="formatNumber(companyAnnualDividend(company))" type="number" step="0.01" readonly />
+                  <input :value="formatNumber(companyAnnualDividend(company))" type="number" step="0.0001" readonly />
                 </label>
               </div>
 
@@ -185,19 +185,19 @@
               <div class="row-grid company-grid company-grid--quality">
                 <label class="field">
                   <span>平均持仓成本</span>
-                  <input v-model.number="company.averageCost" type="number" min="0" step="0.01" required />
+                  <input v-model.number="company.averageCost" type="number" min="0" step="0.0001" required />
                 </label>
                 <label class="field">
                   <span>当前股价</span>
-                  <input v-model.number="company.currentPrice" type="number" min="0" step="0.01" required />
+                  <input v-model.number="company.currentPrice" type="number" min="0" step="0.0001" required />
                 </label>
                 <label class="field">
                   <span>持仓股息率 (%)</span>
-                  <input v-model.number="company.holdingDividendYieldPct" type="number" min="0" step="0.01" required />
+                  <input v-model.number="company.holdingDividendYieldPct" type="number" min="0" step="0.0001" required />
                 </label>
                 <label class="field">
                   <span>当前股息率 (%)</span>
-                  <input v-model.number="company.currentDividendYieldPct" type="number" min="0" step="0.01" required />
+                  <input v-model.number="company.currentDividendYieldPct" type="number" min="0" step="0.0001" required />
                 </label>
               </div>
             </div>
@@ -299,30 +299,30 @@ function removeCompany(index) {
   form.holdings.companies.splice(index, 1)
 }
 
-function roundToTwo(value) {
-  return Number((Number(value || 0)).toFixed(2))
+function roundToFour(value) {
+  return Number((Number(value || 0)).toFixed(4))
 }
 
 function companyDps(company) {
-  return roundToTwo((Number(company.eps || 0) * Number(company.payoutRatio || 0)) / 100)
+  return roundToFour((Number(company.eps || 0) * Number(company.payoutRatio || 0)) / 100)
 }
 
 function companyAnnualDividend(company) {
-  return roundToTwo(Number(company.shares || 0) * companyDps(company))
+  return roundToFour(Number(company.shares || 0) * companyDps(company))
 }
 
 function etfAnnualDividend(etf) {
-  return roundToTwo(Number(etf.shares || 0) * Number(etf.dividendPerShare || 0))
+  return roundToFour(Number(etf.shares || 0) * Number(etf.dividendPerShare || 0))
 }
 
 function etfYieldOnCost(etf) {
   const averageCost = Number(etf.averageCost || 0)
   if (!averageCost) return 0
-  return roundToTwo((Number(etf.dividendPerShare || 0) / averageCost) * 100)
+  return roundToFour((Number(etf.dividendPerShare || 0) / averageCost) * 100)
 }
 
 function formatNumber(value) {
-  return Number(value || 0).toFixed(2)
+  return Number(value || 0).toFixed(4)
 }
 
 function buildPayload() {
@@ -340,7 +340,7 @@ function buildPayload() {
         weightPct: Number(item.weightPct),
         shares: Number(item.shares),
         averageCost: Number(item.averageCost),
-        dividendPerShare: roundToTwo(item.dividendPerShare),
+        dividendPerShare: roundToFour(item.dividendPerShare),
         expectedAnnualDividend: etfAnnualDividend(item),
         yieldOnCost: etfYieldOnCost(item),
         currentReferencePrice: Number(item.currentReferencePrice)
@@ -349,7 +349,7 @@ function buildPayload() {
         name: item.name.trim(),
         valuationStatus: item.valuationStatus,
         shares: Number(item.shares),
-        eps: roundToTwo(item.eps),
+        eps: roundToFour(item.eps),
         payoutRatio: Number(item.payoutRatio),
         dps: companyDps(item),
         expectedAnnualDividend: companyAnnualDividend(item),
