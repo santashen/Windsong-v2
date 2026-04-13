@@ -1,6 +1,6 @@
 // @title           Windsong Blog API
 // @version         1.0
-// @description     Personal blog system API with posts, photos, and gold analysis.
+// @description     Personal blog system API with posts and photos.
 
 // @host            localhost:8080
 // @BasePath        /api/v1

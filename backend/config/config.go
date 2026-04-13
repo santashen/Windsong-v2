@@ -15,7 +15,6 @@ type Config struct {
 	PortfolioAccessPassword string // Password for family portfolio page
 	PostsRepoURL            string // Git repository URL for markdown posts
 	PostsDir                string // Local directory to clone/store posts
-	AIServiceURL            string // AI service URL for gold analysis
 }
 
 // Load loads configuration from environment variables
@@ -31,7 +30,6 @@ func Load() *Config {
 		PortfolioAccessPassword: getEnv("PORTFOLIO_ACCESS_PASSWORD", ""),
 		PostsRepoURL:            getEnv("POSTS_REPO_URL", ""),
 		PostsDir:                getEnv("POSTS_DIR", "./data/posts"),
-		AIServiceURL:            getEnv("AI_SERVICE_URL", "http://localhost:8000"),
 	}
 }
 

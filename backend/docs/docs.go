@@ -73,44 +73,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/gold/today": {
-            "get": {
-                "description": "Returns the AI-generated gold market analysis for today",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "gold"
-                ],
-                "summary": "Get today's gold analysis",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/handlers.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/models.GoldAnalysis"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/photos": {
             "get": {
                 "description": "Returns paginated photos with optional filters",
@@ -743,32 +705,6 @@ const docTemplate = `{
                 }
             }
         },
-        "models.GoldAnalysis": {
-            "type": "object",
-            "properties": {
-                "analysisDate": {
-                    "type": "string"
-                },
-                "content": {
-                    "type": "string"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "modelUsed": {
-                    "type": "string"
-                },
-                "promptHash": {
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
-                }
-            }
-        },
         "models.Pagination": {
             "type": "object",
             "properties": {
@@ -966,7 +902,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
 	Title:            "Windsong Blog API",
-	Description:      "Personal blog system API with posts, photos, and gold analysis.",
+	Description:      "Personal blog system API with posts and photos.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

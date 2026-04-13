@@ -64,29 +64,4 @@ export const postsApi = {
   }
 }
 
-// Gold Analysis API
-export const goldApi = {
-  // Get today's gold analysis
-  getTodayAnalysis() {
-    return api.get('/gold/today', { timeout: 180000 }) // 3 min timeout for LLM
-  }
-}
-
-// AI Service API (direct to Python ai-service)
-const aiApi = axios.create({
-  baseURL: '/ai-api',
-  timeout: 30000,
-  headers: { 'Content-Type': 'application/json' }
-})
-
-// Finance Data API
-export const financeApi = {
-  search(keyword) {
-    return aiApi.get('/finance/search', { params: { keyword } })
-  },
-  getHistory(params) {
-    return aiApi.get('/finance/history', { params })
-  }
-}
-
 export default api
