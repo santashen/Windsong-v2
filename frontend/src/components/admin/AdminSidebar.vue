@@ -46,7 +46,6 @@ const route = useRoute()
 
 const menuItems = [
   { path: '/admin/photos', label: 'Photos', icon: PhotoIcon },
-  { path: '/admin/portfolio', label: 'Portfolio', icon: BriefcaseIcon }
   // Future menu items can be added here:
   // { path: '/admin/posts', label: 'Posts', icon: PostIcon },
   // { path: '/admin/settings', label: 'Settings', icon: SettingsIcon }

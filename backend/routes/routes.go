@@ -39,13 +39,11 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 	// Initialize services
 	photoService := services.NewPhotoService(database.GetDB())
 	postService := services.NewPostService(database.GetDB(), cfg.PostsRepoURL, cfg.PostsDir)
-	goldAnalysisService := services.NewGoldAnalysisService(database.GetDB(), cfg.AIServiceURL)
 	portfolioService := services.NewPortfolioService(database.GetDB())
 
 	// Initialize handlers
 	photoHandler := handlers.NewPhotoHandler(photoService)
 	postHandler := handlers.NewPostHandler(postService)
-	goldAnalysisHandler := handlers.NewGoldAnalysisHandler(goldAnalysisService)
 	portfolioHandler := handlers.NewPortfolioHandler(portfolioService)
 
 	// Initialize auth handler
@@ -97,9 +95,6 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 		{
 			webhooks.POST("/sync", postHandler.SyncPosts)
 		}
-
-		// Gold Analysis routes - Public
-		v1.GET("/gold/today", goldAnalysisHandler.GetTodayAnalysis)
 
 		portfolioProtected := v1.Group("/portfolio")
 		portfolioProtected.Use(middleware.PortfolioAuth(cfg.PortfolioAccessPassword))

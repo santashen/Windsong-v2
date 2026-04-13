@@ -1,7 +1,7 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "Personal blog system API with posts, photos, and gold analysis.",
+        "description": "Personal blog system API with posts and photos.",
         "title": "Windsong Blog API",
         "contact": {},
         "version": "1.0"
@@ -60,44 +60,6 @@
                     },
                     "401": {
                         "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handlers.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/gold/today": {
-            "get": {
-                "description": "Returns the AI-generated gold market analysis for today",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "gold"
-                ],
-                "summary": "Get today's gold analysis",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/handlers.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/models.GoldAnalysis"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/handlers.Response"
                         }
@@ -734,32 +696,6 @@
                     "items": {
                         "type": "integer"
                     }
-                }
-            }
-        },
-        "models.GoldAnalysis": {
-            "type": "object",
-            "properties": {
-                "analysisDate": {
-                    "type": "string"
-                },
-                "content": {
-                    "type": "string"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "modelUsed": {
-                    "type": "string"
-                },
-                "promptHash": {
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
                 }
             }
         },

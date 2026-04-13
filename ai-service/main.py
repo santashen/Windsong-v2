@@ -1,16 +1,13 @@
 import time
 import uuid
-from datetime import datetime, timedelta
 
 import structlog
-from fastapi import FastAPI, HTTPException, Query, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from config import settings
 from logging_config import configure_logging
 from services.base_llm import OpenAICompatibleService
-from services.finance_data import FinanceDataService
-from services.gold_analysis import GoldAnalysisService
 
 configure_logging()
 logger = structlog.get_logger()
@@ -60,8 +57,6 @@ llm_service = OpenAICompatibleService(
     api_key=settings.LLM_API_KEY,
     model=settings.LLM_MODEL,
 )
-gold_service = GoldAnalysisService(llm_service)
-finance_service = FinanceDataService()
 
 
 @app.get("/health")
@@ -82,56 +77,6 @@ async def test_llm():
     except Exception as e:
         logger.error("LLM test failed", error=str(e))
         raise HTTPException(status_code=500, detail=f"LLM connection failed: {str(e)}")
-
-
-@app.get("/api/gold/analyze")
-async def analyze_gold():
-    try:
-        result = await gold_service.analyze()
-        return result
-    except Exception as e:
-        logger.error("gold analysis failed", error=str(e))
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/finance/search")
-async def finance_search(keyword: str = Query(..., min_length=1)):
-    """Search stocks and funds by keyword."""
-    try:
-        results = finance_service.search(keyword)
-        return {"results": results}
-    except Exception as e:
-        logger.error("finance search failed", error=str(e), keyword=keyword)
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/finance/history")
-async def finance_history(
-    codes: str = Query(..., description="Comma-separated codes"),
-    type: str = Query("stock", description="stock or fund"),
-    start: str = Query(None, description="Start date YYYY-MM-DD"),
-    end: str = Query(None, description="End date YYYY-MM-DD"),
-):
-    """Fetch historical data for one or more codes."""
-    if not end:
-        end = datetime.now().strftime("%Y-%m-%d")
-    if not start:
-        start = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
-
-    code_list = [c.strip() for c in codes.split(",") if c.strip()]
-    if not code_list:
-        raise HTTPException(status_code=400, detail="No codes provided")
-
-    results = []
-    for code in code_list:
-        try:
-            data = finance_service.get_history(code, type, start, end)
-            results.append(data)
-        except Exception as e:
-            logger.error("failed to fetch history", code=code, error=str(e))
-            results.append({"code": code, "type": type, "error": str(e)})
-
-    return {"results": results}
 
 
 if __name__ == "__main__":

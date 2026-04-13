@@ -31,7 +31,14 @@
       "Bash(git fetch:*)",
       "Bash(git merge:*)",
       "Bash(git checkout:*)",
-      "Bash(go mod tidy:*)"
+      "Bash(go mod tidy:*)",
+      "Bash(python -c \"import akshare as ak; import inspect; print\\([func for func in dir\\(ak\\) if 'bond' in func.lower\\(\\) or 'rate' in func.lower\\(\\) or 'yield' in func.lower\\(\\)]\\)\")",
+      "Bash(python -c \"import akshare as ak; import inspect; print\\([func for func in dir\\(ak\\) if 'stock' in func.lower\\(\\) and \\('financial' in func.lower\\(\\) or 'profit' in func.lower\\(\\) or 'cash' in func.lower\\(\\) or 'flow' in func.lower\\(\\)\\)]\\)\")",
+      "Bash(python -c \"import akshare as ak; help\\(ak.bond_china_yield\\)\")",
+      "Bash(pip list:*)",
+      "WebSearch",
+      "Bash(python:*)",
+      "Bash(pip install:*)"
     ]
   }
 }
