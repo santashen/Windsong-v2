@@ -8,6 +8,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from config import settings
 from logging_config import configure_logging
 from services.base_llm import OpenAICompatibleService
+from services.valuation_backtest import ValuationBacktestService
 
 configure_logging()
 logger = structlog.get_logger()
@@ -57,6 +58,7 @@ llm_service = OpenAICompatibleService(
     api_key=settings.LLM_API_KEY,
     model=settings.LLM_MODEL,
 )
+valuation_service = ValuationBacktestService()
 
 
 @app.get("/health")
@@ -77,6 +79,23 @@ async def test_llm():
     except Exception as e:
         logger.error("LLM test failed", error=str(e))
         raise HTTPException(status_code=500, detail=f"LLM connection failed: {str(e)}")
+
+
+@app.get("/api/valuation-backtest")
+async def valuation_backtest(symbol: str, start_date: str | None = None, end_date: str | None = None):
+    try:
+        data = valuation_service.get_backtest(symbol=symbol, start_date=start_date, end_date=end_date)
+        return {
+            "symbol": symbol,
+            "start_date": start_date,
+            "end_date": end_date,
+            "data": data,
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("valuation backtest failed", symbol=symbol, start_date=start_date, end_date=end_date)
+        raise HTTPException(status_code=500, detail=f"估值回测失败: {str(exc)}") from exc
 
 
 if __name__ == "__main__":

@@ -195,7 +195,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT || 22 }}
           script_stop: true
-          envs: DB_USER,DB_PASSWORD,DB_NAME,TENCENT_USER,TENCENT_PWD,ADMIN_API_KEY,PORTFOLIO_ACCESS_PASSWORD,POSTS_REPO_URL,LLM_API_URL,LLM_API_KEY,LLM_MODEL,REGISTRY,NAMESPACE,DEPLOY_REF,BACKEND_CHANGED,FRONTEND_CHANGED,AISERVICE_CHANGED
+          envs: DB_USER,DB_PASSWORD,DB_NAME,TENCENT_USER,TENCENT_PWD,ADMIN_API_KEY,PORTFOLIO_ACCESS_PASSWORD,POSTS_REPO_URL,LLM_API_URL,LLM_API_KEY,LLM_MODEL,AKSHARE_PROXY_HOST,AKSHARE_PROXY_TOKEN,AKSHARE_PROXY_RETRY,REGISTRY,NAMESPACE,DEPLOY_REF,BACKEND_CHANGED,FRONTEND_CHANGED,AISERVICE_CHANGED
           script: |
             cd /data/web-dockers/Windsong-v2
 
@@ -212,6 +212,9 @@ jobs:
             echo "LLM_API_URL=$LLM_API_URL" >> .env
             echo "LLM_API_KEY=$LLM_API_KEY" >> .env
             echo "LLM_MODEL=$LLM_MODEL" >> .env
+            echo "AKSHARE_PROXY_HOST=$AKSHARE_PROXY_HOST" >> .env
+            echo "AKSHARE_PROXY_TOKEN=$AKSHARE_PROXY_TOKEN" >> .env
+            echo "AKSHARE_PROXY_RETRY=$AKSHARE_PROXY_RETRY" >> .env
             chmod 600 .env
 
             # 登录腾讯云仓库
@@ -263,6 +266,9 @@ jobs:
           LLM_API_URL: ${{ secrets.LLM_API_URL }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          AKSHARE_PROXY_HOST: ${{ secrets.AKSHARE_PROXY_HOST }}
+          AKSHARE_PROXY_TOKEN: ${{ secrets.AKSHARE_PROXY_TOKEN }}
+          AKSHARE_PROXY_RETRY: ${{ secrets.AKSHARE_PROXY_RETRY }}
           BACKEND_CHANGED: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy') || needs.changes.outputs.backend == 'true' || needs.changes.outputs.shared == 'true' }}
           FRONTEND_CHANGED: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy') || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.shared == 'true' }}
           AISERVICE_CHANGED: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy') || needs.changes.outputs.ai-service == 'true' || needs.changes.outputs.shared == 'true' }}
