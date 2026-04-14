@@ -43,18 +43,49 @@ def _safe_float(value) -> float | None:
     return result
 
 
+def _normalize_rate_input(value) -> float | None:
+    rate = _safe_float(value)
+    if rate is None:
+        return None
+    if rate >= 1:
+        rate /= 100
+    return rate
+
+
 class ValuationBacktestService:
     def __init__(self, bond_yield_path: str | Path | None = None):
         self.bond_yield_path = Path(
             bond_yield_path or Path(__file__).resolve().parents[1] / "assets" / "中国十年期国债收益率历史数据.csv"
         )
 
-    def get_backtest(self, symbol: str, start_date: str | None = None, end_date: str | None = None) -> list[dict]:
+    def get_backtest(
+        self,
+        symbol: str,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        valuation_mode: str | None = None,
+        equity_bond_spread: float | str | None = None,
+        manual_reasonable_pe: float | str | None = None,
+    ) -> list[dict]:
         stock_symbol = _normalize_symbol(symbol)
         start = pd.Timestamp(start_date or "2010-01-01").normalize()
         end = pd.Timestamp(end_date or pd.Timestamp.today().strftime("%Y-%m-%d")).normalize()
         if start >= end:
             raise ValueError("开始日期必须早于结束日期")
+
+        mode = (valuation_mode or "spread").strip().lower()
+        if mode not in {"spread", "manual_pe", "peg1"}:
+            raise ValueError("估值模式无效，仅支持 spread、manual_pe 或 peg1")
+
+        spread_rate = _normalize_rate_input(equity_bond_spread) if mode == "spread" else None
+        if mode == "spread" and spread_rate is None:
+            spread_rate = 0.0
+        if spread_rate is not None and spread_rate < 0:
+            raise ValueError("股债利差不能为负数")
+
+        manual_pe = _safe_float(manual_reasonable_pe) if mode == "manual_pe" else None
+        if mode == "manual_pe" and (manual_pe is None or manual_pe <= 0):
+            raise ValueError("手动输入的合理市盈率必须大于 0")
 
         price_df = self._fetch_price_history(stock_symbol, start, end)
         if price_df.empty:
@@ -76,16 +107,21 @@ class ValuationBacktestService:
             past_dates,
             allow_extrapolation=False,
         )
-        risk_free = self._sample_series_at_dates(
-            self._load_bond_yield_series(),
-            pd.DatetimeIndex(price_df["date"]),
-            allow_extrapolation=True,
-        ).clip(lower=MIN_RISK_FREE_RATE)
         share_count = self._sample_series_at_dates(
             share_count_series,
             pd.DatetimeIndex(price_df["date"]),
             allow_extrapolation=True,
         )
+
+        if mode == "spread":
+            bond_yield = self._sample_series_at_dates(
+                self._load_bond_yield_series(),
+                pd.DatetimeIndex(price_df["date"]),
+                allow_extrapolation=True,
+            ).clip(lower=MIN_RISK_FREE_RATE)
+            risk_free = bond_yield
+        else:
+            risk_free = pd.Series(np.nan, index=pd.DatetimeIndex(price_df["date"]), dtype=float)
 
         merged = price_df.copy()
         merged["smoothed_profit"] = smoothed_profit.to_numpy()
@@ -98,8 +134,6 @@ class ValuationBacktestService:
             & merged["profit_5y_ago"].notna()
             & (merged["smoothed_profit"] > 0)
             & (merged["profit_5y_ago"] > 0)
-            & merged["risk_free_rate"].notna()
-            & (merged["risk_free_rate"] > 0)
             & merged["share_count"].notna()
             & (merged["share_count"] > 0)
         )
@@ -110,9 +144,20 @@ class ValuationBacktestService:
         merged["growth_rate"] = (merged["smoothed_profit"] / merged["profit_5y_ago"]) ** (1 / 5) - 1
         merged["projected_profit"] = merged["smoothed_profit"] * (1 + merged["growth_rate"]) ** 3
 
-        merged["intrinsic_value"] = merged["smoothed_profit"] / merged["risk_free_rate"] / merged["share_count"]
-        merged["buy_line"] = merged["projected_profit"] / merged["risk_free_rate"] * 0.5 / merged["share_count"]
-        projected_sell = merged["projected_profit"] / merged["risk_free_rate"] * 1.5 / merged["share_count"]
+        if mode == "manual_pe":
+            merged["reasonable_pe"] = float(manual_pe)
+        elif mode == "peg1":
+            merged["reasonable_pe"] = merged["growth_rate"] * 100
+        else:
+            merged["reasonable_pe"] = 1 / (merged["risk_free_rate"] + float(spread_rate))
+
+        merged = merged.loc[merged["reasonable_pe"].notna() & (merged["reasonable_pe"] > 0)].copy()
+        if merged.empty:
+            return []
+
+        merged["intrinsic_value"] = merged["smoothed_profit"] * merged["reasonable_pe"] / merged["share_count"]
+        merged["buy_line"] = merged["projected_profit"] * merged["reasonable_pe"] * 0.5 / merged["share_count"]
+        projected_sell = merged["projected_profit"] * merged["reasonable_pe"] * 1.5 / merged["share_count"]
         pe50_sell = merged["smoothed_profit"] * 50 / merged["share_count"]
         merged["sell_line"] = projected_sell.where(projected_sell < pe50_sell, pe50_sell)
         merged = merged.dropna(subset=["close", "intrinsic_value", "buy_line", "sell_line"])
@@ -131,12 +176,16 @@ class ValuationBacktestService:
         return records
 
     def _fetch_price_history(self, symbol: str, start: pd.Timestamp, end: pd.Timestamp) -> pd.DataFrame:
+        return self._fetch_price_history_cached(symbol, start.strftime("%Y%m%d"), end.strftime("%Y%m%d")).copy()
+
+    @lru_cache(maxsize=128)
+    def _fetch_price_history_cached(self, symbol: str, start_date: str, end_date: str) -> pd.DataFrame:
         self._install_proxy_patch_if_available()
         price_df = ak.stock_zh_a_hist(
             symbol=symbol,
             period="daily",
-            start_date=start.strftime("%Y%m%d"),
-            end_date=end.strftime("%Y%m%d"),
+            start_date=start_date,
+            end_date=end_date,
             adjust="",
         )
         if price_df.empty:
@@ -148,6 +197,10 @@ class ValuationBacktestService:
         return normalized.dropna().sort_values("date").reset_index(drop=True)
 
     def _fetch_share_count_series(self, symbol: str) -> pd.Series:
+        return self._fetch_share_count_series_cached(symbol).copy()
+
+    @lru_cache(maxsize=128)
+    def _fetch_share_count_series_cached(self, symbol: str) -> pd.Series:
         stock_change_symbol = self._to_gbjg_symbol(symbol)
         history_df = ak.stock_zh_a_gbjg_em(symbol=stock_change_symbol)
         if history_df.empty:
@@ -205,6 +258,10 @@ class ValuationBacktestService:
         )
 
     def _fetch_latest_share_count(self, symbol: str) -> float:
+        return float(self._fetch_latest_share_count_cached(symbol))
+
+    @lru_cache(maxsize=128)
+    def _fetch_latest_share_count_cached(self, symbol: str) -> float:
         info_df = ak.stock_individual_info_em(symbol=symbol)
         if info_df.empty:
             raise ValueError("未获取到股票股本信息")
@@ -227,6 +284,10 @@ class ValuationBacktestService:
         return f"{symbol}.{market}"
 
     def _build_profit_series(self, symbol: str) -> pd.DataFrame:
+        return self._build_profit_series_cached(symbol).copy()
+
+    @lru_cache(maxsize=128)
+    def _build_profit_series_cached(self, symbol: str) -> pd.DataFrame:
         financial_df = ak.stock_financial_abstract(symbol=symbol)
         if financial_df.empty:
             return pd.DataFrame(columns=["date", "ttm_profit"])

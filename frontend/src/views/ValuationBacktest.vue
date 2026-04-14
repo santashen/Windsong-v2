@@ -12,8 +12,10 @@
           </p>
 
           <div class="formula-ribbon">
-            <span>三年后合理估值 = 第三年预计归母净利润 × (1 / 无风险收益率)</span>
-            <span>无风险收益率最低按 2% 计</span>
+            <span v-if="form.valuationMode === 'spread'">合理市盈率 = 1 / (十年期国债收益率 + 股债利差)</span>
+            <span v-else-if="form.valuationMode === 'manual_pe'">合理估值 = 归母净利润 × 手动输入的合理市盈率</span>
+            <span v-else>PEG = 1，合理市盈率 = 净利润增长率 × 100</span>
+            <span v-if="form.valuationMode === 'spread'">十年期国债收益率最低按 2% 计</span>
           </div>
         </div>
 
@@ -43,6 +45,34 @@
             <label class="field">
               <span>结束日期</span>
               <input v-model="form.endDate" type="date" />
+            </label>
+
+            <div class="field field--radio">
+              <span>估值方式</span>
+              <div class="toggle-group">
+                <label class="toggle-option" :class="{ 'toggle-option--active': form.valuationMode === 'spread' }">
+                  <input v-model="form.valuationMode" type="radio" value="spread" />
+                  <span>股债利差</span>
+                </label>
+                <label class="toggle-option" :class="{ 'toggle-option--active': form.valuationMode === 'manual_pe' }">
+                  <input v-model="form.valuationMode" type="radio" value="manual_pe" />
+                  <span>给定PE</span>
+                </label>
+                <label class="toggle-option" :class="{ 'toggle-option--active': form.valuationMode === 'peg1' }">
+                  <input v-model="form.valuationMode" type="radio" value="peg1" />
+                  <span>PEG=1</span>
+                </label>
+              </div>
+            </div>
+
+            <label v-if="form.valuationMode === 'spread'" class="field">
+              <span>股债利差（%）</span>
+              <input v-model.number="form.equityBondSpread" type="number" step="0.1" min="0" placeholder="0" />
+            </label>
+
+            <label v-else-if="form.valuationMode === 'manual_pe'" class="field">
+              <span>合理市盈率</span>
+              <input v-model.number="form.manualReasonablePe" type="number" step="0.1" min="0.1" placeholder="20" />
             </label>
 
             <button class="submit-button" type="submit" :disabled="loading">
@@ -94,7 +124,9 @@
             <p class="info-title">Method Notes</p>
             <ul class="info-list">
               <li>季度归母净利润先转换为 TTM，再线性插值到日频。</li>
-              <li>十年期国债月度数据按日期线性插值，并设置 2% 下限。</li>
+              <li>股债利差模式下，合理市盈率按 1 / (十年期国债收益率 + 股债利差) 计算。</li>
+              <li>手动市盈率模式下，直接使用输入的合理市盈率，不再参与国债收益率计算。</li>
+              <li>PEG=1 模式下，合理市盈率按净利润年化增长率 × 100 计算。</li>
               <li>历史每股估值按股本变更记录动态换算。</li>
             </ul>
           </div>
@@ -124,7 +156,10 @@ const dataPoints = ref([])
 const form = reactive({
   symbol: '600519',
   startDate: '2010-01-01',
-  endDate: today
+  endDate: today,
+  valuationMode: 'spread',
+  equityBondSpread: 0,
+  manualReasonablePe: 20
 })
 
 let chartInstance = null
@@ -296,10 +331,21 @@ async function loadBacktest() {
   hasQueried.value = true
 
   try {
-    const response = await getValuationBacktest({
+    const params = {
       symbol: form.symbol,
       start_date: form.startDate,
-      end_date: form.endDate
+      end_date: form.endDate,
+      valuation_mode: form.valuationMode
+    }
+
+    if (form.valuationMode === 'spread') {
+      params.equity_bond_spread = form.equityBondSpread
+    } else if (form.valuationMode === 'manual_pe') {
+      params.manual_reasonable_pe = form.manualReasonablePe
+    }
+
+    const response = await getValuationBacktest({
+      ...params
     })
     dataPoints.value = response.data?.data || []
     await nextTick()
@@ -543,6 +589,10 @@ onBeforeUnmount(() => {
   gap: 0.35rem;
 }
 
+.field--radio {
+  gap: 0.5rem;
+}
+
 .field span {
   font-family: 'VT323', monospace;
   font-size: 1.05rem;
@@ -565,6 +615,39 @@ onBeforeUnmount(() => {
   outline: none;
   border-color: rgba(115, 131, 255, 0.72);
   box-shadow: 0 0 0 4px rgba(120, 136, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.toggle-group {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.toggle-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  border: 1px solid rgba(213, 220, 244, 0.95);
+  border-radius: 14px;
+  background: rgba(255,255,255,0.78);
+  color: #55637f;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, color 0.2s ease;
+}
+
+.toggle-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toggle-option--active {
+  border-color: rgba(115, 131, 255, 0.72);
+  box-shadow: 0 0 0 4px rgba(120, 136, 255, 0.12);
+  color: #4453d0;
   transform: translateY(-1px);
 }
 
@@ -709,6 +792,10 @@ onBeforeUnmount(() => {
   .hero-pixels {
     justify-content: start;
     grid-template-columns: repeat(8, 14px);
+  }
+
+  .toggle-group {
+    grid-template-columns: 1fr;
   }
 
   .chart,

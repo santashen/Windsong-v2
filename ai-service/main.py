@@ -82,19 +82,44 @@ async def test_llm():
 
 
 @app.get("/api/valuation-backtest")
-async def valuation_backtest(symbol: str, start_date: str | None = None, end_date: str | None = None):
+async def valuation_backtest(
+    symbol: str,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    valuation_mode: str | None = None,
+    equity_bond_spread: float | None = None,
+    manual_reasonable_pe: float | None = None,
+):
     try:
-        data = valuation_service.get_backtest(symbol=symbol, start_date=start_date, end_date=end_date)
+        data = valuation_service.get_backtest(
+            symbol=symbol,
+            start_date=start_date,
+            end_date=end_date,
+            valuation_mode=valuation_mode,
+            equity_bond_spread=equity_bond_spread,
+            manual_reasonable_pe=manual_reasonable_pe,
+        )
         return {
             "symbol": symbol,
             "start_date": start_date,
             "end_date": end_date,
+            "valuation_mode": valuation_mode,
+            "equity_bond_spread": equity_bond_spread,
+            "manual_reasonable_pe": manual_reasonable_pe,
             "data": data,
         }
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        logger.exception("valuation backtest failed", symbol=symbol, start_date=start_date, end_date=end_date)
+        logger.exception(
+            "valuation backtest failed",
+            symbol=symbol,
+            start_date=start_date,
+            end_date=end_date,
+            valuation_mode=valuation_mode,
+            equity_bond_spread=equity_bond_spread,
+            manual_reasonable_pe=manual_reasonable_pe,
+        )
         raise HTTPException(status_code=500, detail=f"估值回测失败: {str(exc)}") from exc
 
 
