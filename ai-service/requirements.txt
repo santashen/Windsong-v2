@@ -4,3 +4,4 @@ httpx>=0.26.0
 python-dotenv>=1.0.0
 akshare>=1.14.0
 structlog>=24.1.0
+akshare_proxy_patch
