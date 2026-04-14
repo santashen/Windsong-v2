@@ -5,6 +5,7 @@ import Gallery from '@/views/Gallery.vue'
 import BlogList from '@/views/BlogList.vue'
 import BlogPost from '@/views/BlogPost.vue'
 import Services from '@/views/Services.vue'
+import ValuationBacktest from '@/views/ValuationBacktest.vue'
 
 // Admin views (lazy loaded)
 const AdminLayout = () => import('@/views/admin/AdminLayout.vue')
@@ -41,6 +42,11 @@ const routes = [
     path: '/services',
     name: 'Services',
     component: Services
+  },
+  {
+    path: '/services/valuation-backtest',
+    name: 'ValuationBacktest',
+    component: ValuationBacktest
   },
   // Admin routes
   {
