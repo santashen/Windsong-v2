@@ -175,13 +175,9 @@ jobs:
   deploy:
     needs: [changes, build-backend, build-frontend, build-ai-service]
     runs-on: ubuntu-latest
-    # push 到 develop 自动部署；也允许在 Actions 页面手动触发部署
-    # 条件：(1) 有任何 build 成功或被 skip（意味着没有失败），(2) 是 develop push 或 manual dispatch deploy
+    # 只要本次 workflow 没有失败或取消，就始终执行部署
     if: |
-      !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && (
-        (github.event_name == 'push' && github.ref == 'refs/heads/develop') ||
-        (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
-      )
+      !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
 
     steps:
       - name: Checkout code
@@ -195,7 +191,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT || 22 }}
           script_stop: true
-          envs: DB_USER,DB_PASSWORD,DB_NAME,TENCENT_USER,TENCENT_PWD,ADMIN_API_KEY,PORTFOLIO_ACCESS_PASSWORD,POSTS_REPO_URL,LLM_API_URL,LLM_API_KEY,LLM_MODEL,AKSHARE_PROXY_HOST,AKSHARE_PROXY_TOKEN,AKSHARE_PROXY_RETRY,REGISTRY,NAMESPACE,DEPLOY_REF,BACKEND_CHANGED,FRONTEND_CHANGED,AISERVICE_CHANGED
+          envs: DB_USER,DB_PASSWORD,DB_NAME,TENCENT_USER,TENCENT_PWD,ADMIN_API_KEY,PORTFOLIO_ACCESS_PASSWORD,POSTS_REPO_URL,LLM_API_URL,LLM_API_KEY,LLM_MODEL,AKSHARE_PROXY_HOST,AKSHARE_PROXY_TOKEN,AKSHARE_PROXY_RETRY,REGISTRY,NAMESPACE,DEPLOY_REF
           script: |
             cd /data/web-dockers/Windsong-v2
 
@@ -220,32 +216,13 @@ jobs:
             # 登录腾讯云仓库
             echo "$TENCENT_PWD" | docker login $REGISTRY -u "$TENCENT_USER" --password-stdin
 
-            # 只拉取有变化的镜像
-            if [ "$BACKEND_CHANGED" = "true" ]; then
-              echo "Pulling updated backend image..."
-              docker pull $REGISTRY/$NAMESPACE/backend:latest
-            else
-              echo "Backend image not changed, skipping pull"
-            fi
-
-            if [ "$FRONTEND_CHANGED" = "true" ]; then
-              echo "Pulling updated frontend image..."
-              docker pull $REGISTRY/$NAMESPACE/frontend:latest
-            else
-              echo "Frontend image not changed, skipping pull"
-            fi
-
-            if [ "$AISERVICE_CHANGED" = "true" ]; then
-              echo "Pulling updated ai-service image..."
-              docker pull $REGISTRY/$NAMESPACE/ai-service:latest
-            else
-              echo "AI service image not changed, skipping pull"
-            fi
+            # 每次都重新拉取镜像
+            docker compose -f docker-compose.prod.yml pull
 
             # Flyway 镜像（使用国内镜像加速）
             docker pull m.daocloud.io/docker.io/flyway/flyway:10 || docker pull flyway/flyway:10
 
-            # 重启容器
+            # 每次都重新部署
             docker compose -f docker-compose.prod.yml down
             docker compose -f docker-compose.prod.yml up -d
 
@@ -269,6 +246,3 @@ jobs:
           AKSHARE_PROXY_HOST: ${{ secrets.AKSHARE_PROXY_HOST }}
           AKSHARE_PROXY_TOKEN: ${{ secrets.AKSHARE_PROXY_TOKEN }}
           AKSHARE_PROXY_RETRY: ${{ secrets.AKSHARE_PROXY_RETRY }}
-          BACKEND_CHANGED: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy') || needs.changes.outputs.backend == 'true' || needs.changes.outputs.shared == 'true' }}
-          FRONTEND_CHANGED: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy') || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.shared == 'true' }}
-          AISERVICE_CHANGED: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy') || needs.changes.outputs.ai-service == 'true' || needs.changes.outputs.shared == 'true' }}
