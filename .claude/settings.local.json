@@ -38,7 +38,12 @@
       "Bash(pip list:*)",
       "WebSearch",
       "Bash(python:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "mcp__stitch__get_project",
+      "mcp__stitch__get_screen",
+      "Bash(curl -L -o /tmp/screen_pnl.html \"https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ7Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpaCiVodG1sXzUwNTM1OTY3NTdiMTRlZWE4YjlmNDEyZjExMWFiZGFlEgsSBxDR1P2Whw8YAZIBIwoKcHJvamVjdF9pZBIVQhM5OTE2MzkyNjQ1Njk4Mzc0OTUz&filename=&opi=89354086\")",
+      "Read(//tmp/**)",
+      "Bash(curl -L -o /tmp/screen_pnl.png \"https://lh3.googleusercontent.com/aida/ADBb0uhhFCEojJngrg-04K9jz35Q9BCb9KPIZ29__TiZOtSusaIhE_FlHBKUQQATmA0jvO5e9Cqkd3m0cJHSpzHl4Av9lNNQ4Pit9kkfl2cdATJLgRoDgAoubZqPTOq-vkv5fNZ1ycB2BGb4rH48LtcwnKW790V3Di1-f4R1HPfBwym3FXV-YF1IOG1xdtcXsb9K2imc_BVvoiKX8muUp7SQcBFCkWd5oH-In188C-qqVLypBF-95if2ty70MuM\")"
     ]
   }
 }
