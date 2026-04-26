@@ -42,6 +42,43 @@ class FamilyPortfolioRepository:
             rows = cursor.fetchall()
         return [PortfolioRecord.model_validate(row) for row in rows]
 
+    def get_portfolio_by_id(self, portfolio_id: int) -> PortfolioRecord | None:
+        query = """
+            SELECT id, name, total_principal, currency, created_at, updated_at
+            FROM portfolios
+            WHERE id = %(portfolio_id)s
+        """
+        with get_db_connection(autocommit=True) as connection, connection.cursor() as cursor:
+            cursor.execute(query, {"portfolio_id": portfolio_id})
+            row = cursor.fetchone()
+        return PortfolioRecord.model_validate(row) if row else None
+
+    def update_portfolio(self, portfolio_id: int, portfolio: PortfolioBase) -> PortfolioRecord | None:
+        query = """
+            UPDATE portfolios
+            SET
+                name = %(name)s,
+                total_principal = %(total_principal)s,
+                currency = %(currency)s
+            WHERE id = %(portfolio_id)s
+            RETURNING id, name, total_principal, currency, created_at, updated_at
+        """
+        payload = {"portfolio_id": portfolio_id, **portfolio.model_dump()}
+        with get_db_connection() as connection, connection.cursor() as cursor:
+            cursor.execute(query, payload)
+            row = cursor.fetchone()
+        return PortfolioRecord.model_validate(row) if row else None
+
+    def delete_portfolio(self, portfolio_id: int) -> bool:
+        query = """
+            DELETE FROM portfolios
+            WHERE id = %(portfolio_id)s
+        """
+        with get_db_connection() as connection, connection.cursor() as cursor:
+            cursor.execute(query, {"portfolio_id": portfolio_id})
+            deleted = cursor.rowcount > 0
+        return deleted
+
     def create_asset(self, asset: AssetBase) -> AssetRecord:
         query = """
             INSERT INTO assets (ticker_code, name, sector, asset_type, icon_name, current_price)
@@ -79,6 +116,46 @@ class FamilyPortfolioRepository:
             rows = cursor.fetchall()
         return [AssetRecord.model_validate(row) for row in rows]
 
+    def get_asset_by_id(self, asset_id: int) -> AssetRecord | None:
+        query = """
+            SELECT id, ticker_code, name, sector, asset_type, icon_name, current_price, created_at, updated_at
+            FROM assets
+            WHERE id = %(asset_id)s
+        """
+        with get_db_connection(autocommit=True) as connection, connection.cursor() as cursor:
+            cursor.execute(query, {"asset_id": asset_id})
+            row = cursor.fetchone()
+        return AssetRecord.model_validate(row) if row else None
+
+    def update_asset(self, asset_id: int, asset: AssetBase) -> AssetRecord | None:
+        query = """
+            UPDATE assets
+            SET
+                ticker_code = %(ticker_code)s,
+                name = %(name)s,
+                sector = %(sector)s,
+                asset_type = %(asset_type)s,
+                icon_name = %(icon_name)s,
+                current_price = %(current_price)s
+            WHERE id = %(asset_id)s
+            RETURNING id, ticker_code, name, sector, asset_type, icon_name, current_price, created_at, updated_at
+        """
+        payload = {"asset_id": asset_id, **asset.model_dump(mode="json")}
+        with get_db_connection() as connection, connection.cursor() as cursor:
+            cursor.execute(query, payload)
+            row = cursor.fetchone()
+        return AssetRecord.model_validate(row) if row else None
+
+    def delete_asset(self, asset_id: int) -> bool:
+        query = """
+            DELETE FROM assets
+            WHERE id = %(asset_id)s
+        """
+        with get_db_connection() as connection, connection.cursor() as cursor:
+            cursor.execute(query, {"asset_id": asset_id})
+            deleted = cursor.rowcount > 0
+        return deleted
+
     def create_holding(self, holding: HoldingBase) -> HoldingRecord:
         query = """
             INSERT INTO holdings (
@@ -109,6 +186,35 @@ class FamilyPortfolioRepository:
             cursor.execute(query, holding.model_dump())
             row = cursor.fetchone()
         return HoldingRecord.model_validate(row)
+
+    def update_holding(self, holding_id: int, holding: HoldingBase) -> HoldingRecord | None:
+        query = """
+            UPDATE holdings
+            SET
+                portfolio_id = %(portfolio_id)s,
+                asset_id = %(asset_id)s,
+                invested_amount = %(invested_amount)s,
+                share_count = %(share_count)s,
+                average_cost = %(average_cost)s,
+                weight_percentage = %(weight_percentage)s
+            WHERE id = %(holding_id)s
+            RETURNING id, portfolio_id, asset_id, invested_amount, share_count, average_cost, weight_percentage, created_at, updated_at
+        """
+        payload = {"holding_id": holding_id, **holding.model_dump()}
+        with get_db_connection() as connection, connection.cursor() as cursor:
+            cursor.execute(query, payload)
+            row = cursor.fetchone()
+        return HoldingRecord.model_validate(row) if row else None
+
+    def delete_holding(self, holding_id: int) -> bool:
+        query = """
+            DELETE FROM holdings
+            WHERE id = %(holding_id)s
+        """
+        with get_db_connection() as connection, connection.cursor() as cursor:
+            cursor.execute(query, {"holding_id": holding_id})
+            deleted = cursor.rowcount > 0
+        return deleted
 
     def create_investment_thesis(self, thesis: InvestmentThesisBase) -> InvestmentThesisRecord:
         query = """
@@ -150,6 +256,50 @@ class FamilyPortfolioRepository:
             row = cursor.fetchone()
         return InvestmentThesisRecord.model_validate(row)
 
+    def update_investment_thesis(
+        self, thesis_id: int, thesis: InvestmentThesisBase
+    ) -> InvestmentThesisRecord | None:
+        query = """
+            UPDATE investment_theses
+            SET
+                asset_id = %(asset_id)s,
+                strategy_tag = %(strategy_tag)s,
+                expected_dividend_yield = %(expected_dividend_yield)s,
+                margin_of_safety = %(margin_of_safety)s,
+                valuation_metric_name = %(valuation_metric_name)s,
+                percentile_value = %(percentile_value)s,
+                short_description = %(short_description)s,
+                markdown_details = %(markdown_details)s
+            WHERE id = %(thesis_id)s
+            RETURNING
+                id,
+                asset_id,
+                strategy_tag,
+                expected_dividend_yield,
+                margin_of_safety,
+                valuation_metric_name,
+                percentile_value,
+                short_description,
+                markdown_details,
+                created_at,
+                updated_at
+        """
+        payload = {"thesis_id": thesis_id, **thesis.model_dump()}
+        with get_db_connection() as connection, connection.cursor() as cursor:
+            cursor.execute(query, payload)
+            row = cursor.fetchone()
+        return InvestmentThesisRecord.model_validate(row) if row else None
+
+    def delete_investment_thesis(self, thesis_id: int) -> bool:
+        query = """
+            DELETE FROM investment_theses
+            WHERE id = %(thesis_id)s
+        """
+        with get_db_connection() as connection, connection.cursor() as cursor:
+            cursor.execute(query, {"thesis_id": thesis_id})
+            deleted = cursor.rowcount > 0
+        return deleted
+
     def create_performance_history(self, history: PerformanceHistoryBase) -> PerformanceHistoryRecord:
         query = """
             INSERT INTO performance_history (portfolio_id, record_date, portfolio_nav, benchmark_nav)
@@ -164,6 +314,35 @@ class FamilyPortfolioRepository:
             cursor.execute(query, history.model_dump())
             row = cursor.fetchone()
         return PerformanceHistoryRecord.model_validate(row)
+
+    def update_performance_history(
+        self, history_id: int, history: PerformanceHistoryBase
+    ) -> PerformanceHistoryRecord | None:
+        query = """
+            UPDATE performance_history
+            SET
+                portfolio_id = %(portfolio_id)s,
+                record_date = %(record_date)s,
+                portfolio_nav = %(portfolio_nav)s,
+                benchmark_nav = %(benchmark_nav)s
+            WHERE id = %(history_id)s
+            RETURNING id, portfolio_id, record_date, portfolio_nav, benchmark_nav, created_at, updated_at
+        """
+        payload = {"history_id": history_id, **history.model_dump()}
+        with get_db_connection() as connection, connection.cursor() as cursor:
+            cursor.execute(query, payload)
+            row = cursor.fetchone()
+        return PerformanceHistoryRecord.model_validate(row) if row else None
+
+    def delete_performance_history(self, history_id: int) -> bool:
+        query = """
+            DELETE FROM performance_history
+            WHERE id = %(history_id)s
+        """
+        with get_db_connection() as connection, connection.cursor() as cursor:
+            cursor.execute(query, {"history_id": history_id})
+            deleted = cursor.rowcount > 0
+        return deleted
 
     def get_portfolio_aggregate(self, portfolio_id: int) -> PortfolioAggregateView | None:
         portfolio_query = """

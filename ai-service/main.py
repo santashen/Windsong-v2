@@ -8,8 +8,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from config import settings
 from logging_config import configure_logging
 from models import AssetBase, HoldingBase, InvestmentThesisBase, PerformanceHistoryBase, PortfolioBase
-from repositories import FamilyPortfolioRepository
 from services.base_llm import OpenAICompatibleService
+from services.family_portfolio import FamilyPortfolioService
 from services.valuation_backtest import ValuationBacktestService
 
 configure_logging()
@@ -61,7 +61,7 @@ llm_service = OpenAICompatibleService(
     model=settings.LLM_MODEL,
 )
 valuation_service = ValuationBacktestService()
-portfolio_repository = FamilyPortfolioRepository()
+family_portfolio_service = FamilyPortfolioService()
 
 
 @app.get("/health")
@@ -72,8 +72,7 @@ async def health():
 @app.get("/api/family-portfolio/portfolios")
 async def list_family_portfolios():
     try:
-        portfolios = portfolio_repository.list_portfolios()
-        return {"items": [portfolio.model_dump(mode="json") for portfolio in portfolios]}
+        return family_portfolio_service.list_portfolios()
     except Exception as exc:
         logger.exception("list family portfolios failed")
         raise HTTPException(status_code=500, detail=f"读取投资组合失败: {str(exc)}") from exc
@@ -82,18 +81,48 @@ async def list_family_portfolios():
 @app.post("/api/family-portfolio/portfolios")
 async def create_family_portfolio(payload: PortfolioBase):
     try:
-        portfolio = portfolio_repository.create_portfolio(payload)
-        return portfolio.model_dump(mode="json")
+        return family_portfolio_service.create_portfolio(payload)
     except Exception as exc:
         logger.exception("create family portfolio failed", payload=payload.model_dump(mode="json"))
         raise HTTPException(status_code=500, detail=f"创建投资组合失败: {str(exc)}") from exc
 
 
+@app.put("/api/family-portfolio/portfolios/{portfolio_id}")
+async def update_family_portfolio(portfolio_id: int, payload: PortfolioBase):
+    try:
+        portfolio = family_portfolio_service.update_portfolio(portfolio_id, payload)
+        if portfolio is None:
+            raise HTTPException(status_code=404, detail="投资组合不存在")
+        return portfolio
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(
+            "update family portfolio failed",
+            portfolio_id=portfolio_id,
+            payload=payload.model_dump(mode="json"),
+        )
+        raise HTTPException(status_code=500, detail=f"更新投资组合失败: {str(exc)}") from exc
+
+
+@app.delete("/api/family-portfolio/portfolios/{portfolio_id}")
+async def delete_family_portfolio(portfolio_id: int):
+    try:
+        deleted = family_portfolio_service.delete_portfolio(portfolio_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="投资组合不存在")
+        return {"deleted": True, "portfolio_id": portfolio_id}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("delete family portfolio failed", portfolio_id=portfolio_id)
+        raise HTTPException(status_code=500, detail=f"删除投资组合失败: {str(exc)}") from exc
+
+
 @app.get("/api/family-portfolio/assets")
 async def list_family_assets():
     try:
-        assets = portfolio_repository.list_assets()
-        return {"items": [asset.model_dump(mode="json") for asset in assets]}
+        return family_portfolio_service.list_assets()
     except Exception as exc:
         logger.exception("list family assets failed")
         raise HTTPException(status_code=500, detail=f"读取资产失败: {str(exc)}") from exc
@@ -102,50 +131,166 @@ async def list_family_assets():
 @app.post("/api/family-portfolio/assets")
 async def create_family_asset(payload: AssetBase):
     try:
-        asset = portfolio_repository.create_asset(payload)
-        return asset.model_dump(mode="json")
+        return family_portfolio_service.create_asset(payload)
     except Exception as exc:
         logger.exception("create family asset failed", payload=payload.model_dump(mode="json"))
         raise HTTPException(status_code=500, detail=f"创建资产失败: {str(exc)}") from exc
 
 
+@app.put("/api/family-portfolio/assets/{asset_id}")
+async def update_family_asset(asset_id: int, payload: AssetBase):
+    try:
+        asset = family_portfolio_service.update_asset(asset_id, payload)
+        if asset is None:
+            raise HTTPException(status_code=404, detail="资产不存在")
+        return asset
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("update family asset failed", asset_id=asset_id, payload=payload.model_dump(mode="json"))
+        raise HTTPException(status_code=500, detail=f"更新资产失败: {str(exc)}") from exc
+
+
+@app.delete("/api/family-portfolio/assets/{asset_id}")
+async def delete_family_asset(asset_id: int):
+    try:
+        deleted = family_portfolio_service.delete_asset(asset_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="资产不存在")
+        return {"deleted": True, "asset_id": asset_id}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("delete family asset failed", asset_id=asset_id)
+        raise HTTPException(status_code=500, detail=f"删除资产失败: {str(exc)}") from exc
+
+
 @app.post("/api/family-portfolio/holdings")
 async def create_family_holding(payload: HoldingBase):
     try:
-        holding = portfolio_repository.create_holding(payload)
-        return holding.model_dump(mode="json")
+        return family_portfolio_service.create_holding(payload)
     except Exception as exc:
         logger.exception("create family holding failed", payload=payload.model_dump(mode="json"))
         raise HTTPException(status_code=500, detail=f"创建持仓失败: {str(exc)}") from exc
 
 
+@app.put("/api/family-portfolio/holdings/{holding_id}")
+async def update_family_holding(holding_id: int, payload: HoldingBase):
+    try:
+        holding = family_portfolio_service.update_holding(holding_id, payload)
+        if holding is None:
+            raise HTTPException(status_code=404, detail="持仓不存在")
+        return holding
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("update family holding failed", holding_id=holding_id, payload=payload.model_dump(mode="json"))
+        raise HTTPException(status_code=500, detail=f"更新持仓失败: {str(exc)}") from exc
+
+
+@app.delete("/api/family-portfolio/holdings/{holding_id}")
+async def delete_family_holding(holding_id: int):
+    try:
+        deleted = family_portfolio_service.delete_holding(holding_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="持仓不存在")
+        return {"deleted": True, "holding_id": holding_id}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("delete family holding failed", holding_id=holding_id)
+        raise HTTPException(status_code=500, detail=f"删除持仓失败: {str(exc)}") from exc
+
+
 @app.post("/api/family-portfolio/investment-theses")
 async def create_family_investment_thesis(payload: InvestmentThesisBase):
     try:
-        thesis = portfolio_repository.create_investment_thesis(payload)
-        return thesis.model_dump(mode="json")
+        return family_portfolio_service.create_investment_thesis(payload)
     except Exception as exc:
         logger.exception("create investment thesis failed", payload=payload.model_dump(mode="json"))
         raise HTTPException(status_code=500, detail=f"创建投资逻辑失败: {str(exc)}") from exc
 
 
+@app.put("/api/family-portfolio/investment-theses/{thesis_id}")
+async def update_family_investment_thesis(thesis_id: int, payload: InvestmentThesisBase):
+    try:
+        thesis = family_portfolio_service.update_investment_thesis(thesis_id, payload)
+        if thesis is None:
+            raise HTTPException(status_code=404, detail="投资逻辑不存在")
+        return thesis
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(
+            "update investment thesis failed",
+            thesis_id=thesis_id,
+            payload=payload.model_dump(mode="json"),
+        )
+        raise HTTPException(status_code=500, detail=f"更新投资逻辑失败: {str(exc)}") from exc
+
+
+@app.delete("/api/family-portfolio/investment-theses/{thesis_id}")
+async def delete_family_investment_thesis(thesis_id: int):
+    try:
+        deleted = family_portfolio_service.delete_investment_thesis(thesis_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="投资逻辑不存在")
+        return {"deleted": True, "thesis_id": thesis_id}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("delete investment thesis failed", thesis_id=thesis_id)
+        raise HTTPException(status_code=500, detail=f"删除投资逻辑失败: {str(exc)}") from exc
+
+
 @app.post("/api/family-portfolio/performance-history")
 async def create_family_performance_history(payload: PerformanceHistoryBase):
     try:
-        history = portfolio_repository.create_performance_history(payload)
-        return history.model_dump(mode="json")
+        return family_portfolio_service.create_performance_history(payload)
     except Exception as exc:
         logger.exception("create performance history failed", payload=payload.model_dump(mode="json"))
         raise HTTPException(status_code=500, detail=f"创建业绩记录失败: {str(exc)}") from exc
 
 
+@app.put("/api/family-portfolio/performance-history/{history_id}")
+async def update_family_performance_history(history_id: int, payload: PerformanceHistoryBase):
+    try:
+        history = family_portfolio_service.update_performance_history(history_id, payload)
+        if history is None:
+            raise HTTPException(status_code=404, detail="业绩记录不存在")
+        return history
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(
+            "update performance history failed",
+            history_id=history_id,
+            payload=payload.model_dump(mode="json"),
+        )
+        raise HTTPException(status_code=500, detail=f"更新业绩记录失败: {str(exc)}") from exc
+
+
+@app.delete("/api/family-portfolio/performance-history/{history_id}")
+async def delete_family_performance_history(history_id: int):
+    try:
+        deleted = family_portfolio_service.delete_performance_history(history_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="业绩记录不存在")
+        return {"deleted": True, "history_id": history_id}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("delete performance history failed", history_id=history_id)
+        raise HTTPException(status_code=500, detail=f"删除业绩记录失败: {str(exc)}") from exc
+
+
 @app.get("/api/family-portfolio/portfolios/{portfolio_id}")
 async def get_family_portfolio_aggregate(portfolio_id: int):
     try:
-        aggregate = portfolio_repository.get_portfolio_aggregate(portfolio_id)
+        aggregate = family_portfolio_service.get_portfolio_detail(portfolio_id)
         if aggregate is None:
             raise HTTPException(status_code=404, detail="投资组合不存在")
-        return aggregate.model_dump(mode="json")
+        return aggregate
     except HTTPException:
         raise
     except Exception as exc:
