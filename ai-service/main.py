@@ -7,6 +7,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from config import settings
 from logging_config import configure_logging
+from models import AssetBase, HoldingBase, InvestmentThesisBase, PerformanceHistoryBase, PortfolioBase
+from repositories import FamilyPortfolioRepository
 from services.base_llm import OpenAICompatibleService
 from services.valuation_backtest import ValuationBacktestService
 
@@ -59,11 +61,96 @@ llm_service = OpenAICompatibleService(
     model=settings.LLM_MODEL,
 )
 valuation_service = ValuationBacktestService()
+portfolio_repository = FamilyPortfolioRepository()
 
 
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "ai-service"}
+
+
+@app.get("/api/family-portfolio/portfolios")
+async def list_family_portfolios():
+    try:
+        portfolios = portfolio_repository.list_portfolios()
+        return {"items": [portfolio.model_dump(mode="json") for portfolio in portfolios]}
+    except Exception as exc:
+        logger.exception("list family portfolios failed")
+        raise HTTPException(status_code=500, detail=f"读取投资组合失败: {str(exc)}") from exc
+
+
+@app.post("/api/family-portfolio/portfolios")
+async def create_family_portfolio(payload: PortfolioBase):
+    try:
+        portfolio = portfolio_repository.create_portfolio(payload)
+        return portfolio.model_dump(mode="json")
+    except Exception as exc:
+        logger.exception("create family portfolio failed", payload=payload.model_dump(mode="json"))
+        raise HTTPException(status_code=500, detail=f"创建投资组合失败: {str(exc)}") from exc
+
+
+@app.get("/api/family-portfolio/assets")
+async def list_family_assets():
+    try:
+        assets = portfolio_repository.list_assets()
+        return {"items": [asset.model_dump(mode="json") for asset in assets]}
+    except Exception as exc:
+        logger.exception("list family assets failed")
+        raise HTTPException(status_code=500, detail=f"读取资产失败: {str(exc)}") from exc
+
+
+@app.post("/api/family-portfolio/assets")
+async def create_family_asset(payload: AssetBase):
+    try:
+        asset = portfolio_repository.create_asset(payload)
+        return asset.model_dump(mode="json")
+    except Exception as exc:
+        logger.exception("create family asset failed", payload=payload.model_dump(mode="json"))
+        raise HTTPException(status_code=500, detail=f"创建资产失败: {str(exc)}") from exc
+
+
+@app.post("/api/family-portfolio/holdings")
+async def create_family_holding(payload: HoldingBase):
+    try:
+        holding = portfolio_repository.create_holding(payload)
+        return holding.model_dump(mode="json")
+    except Exception as exc:
+        logger.exception("create family holding failed", payload=payload.model_dump(mode="json"))
+        raise HTTPException(status_code=500, detail=f"创建持仓失败: {str(exc)}") from exc
+
+
+@app.post("/api/family-portfolio/investment-theses")
+async def create_family_investment_thesis(payload: InvestmentThesisBase):
+    try:
+        thesis = portfolio_repository.create_investment_thesis(payload)
+        return thesis.model_dump(mode="json")
+    except Exception as exc:
+        logger.exception("create investment thesis failed", payload=payload.model_dump(mode="json"))
+        raise HTTPException(status_code=500, detail=f"创建投资逻辑失败: {str(exc)}") from exc
+
+
+@app.post("/api/family-portfolio/performance-history")
+async def create_family_performance_history(payload: PerformanceHistoryBase):
+    try:
+        history = portfolio_repository.create_performance_history(payload)
+        return history.model_dump(mode="json")
+    except Exception as exc:
+        logger.exception("create performance history failed", payload=payload.model_dump(mode="json"))
+        raise HTTPException(status_code=500, detail=f"创建业绩记录失败: {str(exc)}") from exc
+
+
+@app.get("/api/family-portfolio/portfolios/{portfolio_id}")
+async def get_family_portfolio_aggregate(portfolio_id: int):
+    try:
+        aggregate = portfolio_repository.get_portfolio_aggregate(portfolio_id)
+        if aggregate is None:
+            raise HTTPException(status_code=404, detail="投资组合不存在")
+        return aggregate.model_dump(mode="json")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("get family portfolio aggregate failed", portfolio_id=portfolio_id)
+        raise HTTPException(status_code=500, detail=f"读取投资组合详情失败: {str(exc)}") from exc
 
 
 @app.get("/api/test")
