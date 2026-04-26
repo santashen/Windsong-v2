@@ -2,9 +2,10 @@ import time
 import uuid
 
 import structlog
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from auth import verify_admin_api_key
 from config import settings
 from logging_config import configure_logging
 from models import AssetBase, HoldingBase, InvestmentThesisBase, PerformanceHistoryBase, PortfolioBase
@@ -79,7 +80,7 @@ async def list_family_portfolios():
 
 
 @app.post("/api/family-portfolio/portfolios")
-async def create_family_portfolio(payload: PortfolioBase):
+async def create_family_portfolio(payload: PortfolioBase, _: None = Depends(verify_admin_api_key)):
     try:
         return family_portfolio_service.create_portfolio(payload)
     except Exception as exc:
@@ -88,7 +89,9 @@ async def create_family_portfolio(payload: PortfolioBase):
 
 
 @app.put("/api/family-portfolio/portfolios/{portfolio_id}")
-async def update_family_portfolio(portfolio_id: int, payload: PortfolioBase):
+async def update_family_portfolio(
+    portfolio_id: int, payload: PortfolioBase, _: None = Depends(verify_admin_api_key)
+):
     try:
         portfolio = family_portfolio_service.update_portfolio(portfolio_id, payload)
         if portfolio is None:
@@ -106,7 +109,7 @@ async def update_family_portfolio(portfolio_id: int, payload: PortfolioBase):
 
 
 @app.delete("/api/family-portfolio/portfolios/{portfolio_id}")
-async def delete_family_portfolio(portfolio_id: int):
+async def delete_family_portfolio(portfolio_id: int, _: None = Depends(verify_admin_api_key)):
     try:
         deleted = family_portfolio_service.delete_portfolio(portfolio_id)
         if not deleted:
@@ -129,7 +132,7 @@ async def list_family_assets():
 
 
 @app.post("/api/family-portfolio/assets")
-async def create_family_asset(payload: AssetBase):
+async def create_family_asset(payload: AssetBase, _: None = Depends(verify_admin_api_key)):
     try:
         return family_portfolio_service.create_asset(payload)
     except Exception as exc:
@@ -138,7 +141,9 @@ async def create_family_asset(payload: AssetBase):
 
 
 @app.put("/api/family-portfolio/assets/{asset_id}")
-async def update_family_asset(asset_id: int, payload: AssetBase):
+async def update_family_asset(
+    asset_id: int, payload: AssetBase, _: None = Depends(verify_admin_api_key)
+):
     try:
         asset = family_portfolio_service.update_asset(asset_id, payload)
         if asset is None:
@@ -152,7 +157,7 @@ async def update_family_asset(asset_id: int, payload: AssetBase):
 
 
 @app.delete("/api/family-portfolio/assets/{asset_id}")
-async def delete_family_asset(asset_id: int):
+async def delete_family_asset(asset_id: int, _: None = Depends(verify_admin_api_key)):
     try:
         deleted = family_portfolio_service.delete_asset(asset_id)
         if not deleted:
@@ -166,7 +171,7 @@ async def delete_family_asset(asset_id: int):
 
 
 @app.post("/api/family-portfolio/holdings")
-async def create_family_holding(payload: HoldingBase):
+async def create_family_holding(payload: HoldingBase, _: None = Depends(verify_admin_api_key)):
     try:
         return family_portfolio_service.create_holding(payload)
     except Exception as exc:
@@ -175,7 +180,9 @@ async def create_family_holding(payload: HoldingBase):
 
 
 @app.put("/api/family-portfolio/holdings/{holding_id}")
-async def update_family_holding(holding_id: int, payload: HoldingBase):
+async def update_family_holding(
+    holding_id: int, payload: HoldingBase, _: None = Depends(verify_admin_api_key)
+):
     try:
         holding = family_portfolio_service.update_holding(holding_id, payload)
         if holding is None:
@@ -189,7 +196,7 @@ async def update_family_holding(holding_id: int, payload: HoldingBase):
 
 
 @app.delete("/api/family-portfolio/holdings/{holding_id}")
-async def delete_family_holding(holding_id: int):
+async def delete_family_holding(holding_id: int, _: None = Depends(verify_admin_api_key)):
     try:
         deleted = family_portfolio_service.delete_holding(holding_id)
         if not deleted:
@@ -203,7 +210,9 @@ async def delete_family_holding(holding_id: int):
 
 
 @app.post("/api/family-portfolio/investment-theses")
-async def create_family_investment_thesis(payload: InvestmentThesisBase):
+async def create_family_investment_thesis(
+    payload: InvestmentThesisBase, _: None = Depends(verify_admin_api_key)
+):
     try:
         return family_portfolio_service.create_investment_thesis(payload)
     except Exception as exc:
@@ -212,7 +221,9 @@ async def create_family_investment_thesis(payload: InvestmentThesisBase):
 
 
 @app.put("/api/family-portfolio/investment-theses/{thesis_id}")
-async def update_family_investment_thesis(thesis_id: int, payload: InvestmentThesisBase):
+async def update_family_investment_thesis(
+    thesis_id: int, payload: InvestmentThesisBase, _: None = Depends(verify_admin_api_key)
+):
     try:
         thesis = family_portfolio_service.update_investment_thesis(thesis_id, payload)
         if thesis is None:
@@ -230,7 +241,7 @@ async def update_family_investment_thesis(thesis_id: int, payload: InvestmentThe
 
 
 @app.delete("/api/family-portfolio/investment-theses/{thesis_id}")
-async def delete_family_investment_thesis(thesis_id: int):
+async def delete_family_investment_thesis(thesis_id: int, _: None = Depends(verify_admin_api_key)):
     try:
         deleted = family_portfolio_service.delete_investment_thesis(thesis_id)
         if not deleted:
@@ -244,7 +255,9 @@ async def delete_family_investment_thesis(thesis_id: int):
 
 
 @app.post("/api/family-portfolio/performance-history")
-async def create_family_performance_history(payload: PerformanceHistoryBase):
+async def create_family_performance_history(
+    payload: PerformanceHistoryBase, _: None = Depends(verify_admin_api_key)
+):
     try:
         return family_portfolio_service.create_performance_history(payload)
     except Exception as exc:
@@ -253,7 +266,9 @@ async def create_family_performance_history(payload: PerformanceHistoryBase):
 
 
 @app.put("/api/family-portfolio/performance-history/{history_id}")
-async def update_family_performance_history(history_id: int, payload: PerformanceHistoryBase):
+async def update_family_performance_history(
+    history_id: int, payload: PerformanceHistoryBase, _: None = Depends(verify_admin_api_key)
+):
     try:
         history = family_portfolio_service.update_performance_history(history_id, payload)
         if history is None:
@@ -271,7 +286,9 @@ async def update_family_performance_history(history_id: int, payload: Performanc
 
 
 @app.delete("/api/family-portfolio/performance-history/{history_id}")
-async def delete_family_performance_history(history_id: int):
+async def delete_family_performance_history(
+    history_id: int, _: None = Depends(verify_admin_api_key)
+):
     try:
         deleted = family_portfolio_service.delete_performance_history(history_id)
         if not deleted:

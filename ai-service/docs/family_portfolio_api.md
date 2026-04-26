@@ -115,3 +115,5 @@ Base path: `/api/family-portfolio`
 - `asset_type` must be one of `stock`, `etf`, `fund`, `bond`, `cash`, `other`.
 - Monetary and ratio fields are stored as PostgreSQL `NUMERIC`, so API responses keep decimal values as strings.
 - Portfolio detail currently returns the latest thesis per asset, ordered by `updated_at DESC, id DESC`.
+- All write operations (`POST`, `PUT`, `DELETE`) require admin auth through `X-API-Key: <ADMIN_API_KEY>` or `Authorization: Bearer <ADMIN_API_KEY>`.
+- If `ADMIN_API_KEY` is empty, write auth is skipped to match the existing backend development behavior.
