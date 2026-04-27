@@ -16,7 +16,7 @@
           <div class="status-orb"></div>
           <div>
             <p class="status-label">Directory status</p>
-            <p class="status-value">1 service online</p>
+            <p class="status-value">{{ services.length }} services online</p>
           </div>
         </div>
 
@@ -89,6 +89,17 @@ import Footer from '@/components/layout/Footer.vue'
 import Header from '@/components/layout/Header.vue'
 
 const services = [
+  {
+    slug: 'family-portfolio',
+    to: '/services/family-portfolio',
+    kind: 'Finance',
+    title: '家庭投资组合',
+    description: '面向家人的组合报告页，展示净值、持仓、投资逻辑与历史曲线。',
+    topics: ['Portfolio', 'Family Office', 'Report'],
+    type: 'Dashboard',
+    output: 'View + Admin',
+    live: true
+  },
   {
     slug: 'valuation-backtest',
     to: '/services/valuation-backtest',
