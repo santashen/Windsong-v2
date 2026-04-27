@@ -1,19 +1,11 @@
 <template>
   <div class="portfolio-page">
-    <main class="portfolio-shell">
-      <header class="top-app-bar">
-        <div class="top-app-bar__brand">投资组合分析</div>
-        <div class="top-app-bar__actions">
-          <router-link class="manage-link" to="/admin/family-portfolio">管理页面</router-link>
-        </div>
-      </header>
+    <Header />
 
+    <main class="portfolio-shell">
       <div class="portfolio-main">
-        <section class="page-intro">
-          <p class="page-kicker">Investment Clarity System</p>
-          <h1>家庭投资组合</h1>
-          <p>长期视角下的净值、持仓和安全边际，面向家人展示而不是面向交易噪音。</p>
-        </section>
+
+
 
         <section v-if="error" class="empty-shell">
           <h2>数据读取失败</h2>
@@ -49,7 +41,6 @@
             <div class="section-head">
               <div>
                 <h2>核心组合持仓</h2>
-                <p>按资产权重排序，采用中国市场红涨绿跌表达。</p>
               </div>
               <span class="section-stamp">{{ lastUpdatedLabel }}</span>
             </div>
@@ -138,11 +129,11 @@
             <div class="section-head">
               <div>
                 <h2>历史价值增长曲线</h2>
-                <p>组合净值与比较基准的长期表现对照。</p>
+                <p>组合净值与沪深300指数的长期表现对照。</p>
               </div>
               <div class="legend-row">
-                <span><i class="legend-dot legend-dot--primary"></i>家族投资组合</span>
-                <span><i class="legend-dot legend-dot--secondary"></i>比较基准</span>
+                <span><i class="legend-dot legend-dot--primary"></i>家庭投资组合</span>
+                <span><i class="legend-dot legend-dot--secondary"></i>沪深300指数</span>
               </div>
             </div>
 
@@ -193,12 +184,13 @@
       </div>
     </transition>
 
-    <footer class="report-footer">
+    <section class="report-footer-band">
       <div class="report-footer__inner">
-        <p>“价格是你所付出的，价值是你所得到的。” —— 沃伦·巴菲特</p>
-        <span>Institutional Alpha 投资报告系统</span>
+        <p>“我认为，格雷厄姆有三个基本的思想，这足以作为你投资智慧的根本：（1）把股票视作企业所有权的一部分；（2）把市场波动当作朋友而不是敌人；（3）在买入价格上留有充足的安全边际。我认为这些思想，从现在起直至百年后，都将会被看作正确投资的基石。” —— 沃伦·巴菲特</p>
       </div>
-    </footer>
+    </section>
+
+    <Footer />
   </div>
 </template>
 
@@ -208,6 +200,8 @@ import { marked } from 'marked'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { portfolioApi } from '@/api/familyPortfolio'
+import Footer from '@/components/layout/Footer.vue'
+import Header from '@/components/layout/Header.vue'
 
 const loading = ref(true)
 const error = ref('')
@@ -458,33 +452,35 @@ onBeforeUnmount(() => {
 }
 
 .portfolio-shell {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  min-height: calc(100vh - 140px);
 }
 
 .portfolio-main,
 .report-footer__inner {
-  width: min(1280px, calc(100% - 40px));
+  max-width: 1200px;
   margin: 0 auto;
+  padding: 0 1.5rem;
 }
 
 .portfolio-main {
-  padding: 2rem 0 3rem;
+  padding-top: 1.75rem;
+  padding-bottom: 3rem;
 }
 
-.top-app-bar {
+.report-masthead {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  padding: 1rem 2rem;
-  border-bottom: 1px solid #e2e8f0;
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(10px);
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+  border-radius: 8px;
 }
 
-.top-app-bar__brand {
+.report-masthead__brand {
   font-family: 'Manrope', sans-serif;
   font-size: 1.25rem;
   font-weight: 800;
@@ -505,6 +501,7 @@ onBeforeUnmount(() => {
   color: #ffffff;
   font-size: 0.875rem;
   font-weight: 700;
+  text-decoration: none;
 }
 
 .page-intro {
@@ -541,7 +538,7 @@ onBeforeUnmount(() => {
 .thesis-card,
 .chart-shell,
 .detail-modal,
-.report-footer {
+.report-footer-band {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
@@ -887,11 +884,10 @@ onBeforeUnmount(() => {
   padding-left: 1.2rem;
 }
 
-.report-footer {
-  margin: 0 0 2rem;
-  padding: 2rem 0 0;
-  border-top: 1px solid #e2e8f0;
-  background: #ffffff;
+.report-footer-band {
+  margin: 0 auto 1.5rem;
+  max-width: 1200px;
+  border-radius: 8px;
 }
 
 .report-footer__inner {
@@ -901,6 +897,8 @@ onBeforeUnmount(() => {
   align-items: center;
   color: #64748b;
   font-size: 0.9rem;
+  padding-top: 1.4rem;
+  padding-bottom: 1.4rem;
 }
 
 .fade-enter-active,
@@ -934,10 +932,11 @@ onBeforeUnmount(() => {
 @media (max-width: 720px) {
   .portfolio-main,
   .report-footer__inner {
-    width: min(100% - 24px, 1280px);
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 
-  .top-app-bar {
+  .report-masthead {
     padding: 1rem;
   }
 
