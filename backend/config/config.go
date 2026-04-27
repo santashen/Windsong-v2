@@ -12,7 +12,6 @@ type Config struct {
 	Port                    string
 	Env                     string
 	AdminAPIKey             string // API Key for admin operations
-	PortfolioAccessPassword string // Password for family portfolio page
 	PostsRepoURL            string // Git repository URL for markdown posts
 	PostsDir                string // Local directory to clone/store posts
 }
@@ -27,7 +26,6 @@ func Load() *Config {
 		Port:                    getEnv("PORT", "8080"),
 		Env:                     getEnv("ENV", "development"),
 		AdminAPIKey:             getEnv("ADMIN_API_KEY", ""), // Set this in production!
-		PortfolioAccessPassword: getEnv("PORTFOLIO_ACCESS_PASSWORD", ""),
 		PostsRepoURL:            getEnv("POSTS_REPO_URL", ""),
 		PostsDir:                getEnv("POSTS_DIR", "./data/posts"),
 	}

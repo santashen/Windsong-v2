@@ -21,9 +21,3 @@ type PhotoServiceInterface interface {
 	UpdatePhoto(id uint, photo *models.Photo) error
 	DeletePhoto(id uint) error
 }
-
-// PortfolioServiceInterface defines the contract handlers need from PortfolioService.
-type PortfolioServiceInterface interface {
-	CreateSnapshot(snapshot *models.PortfolioSnapshot) error
-	GetLatestSnapshot() (*models.PortfolioSnapshot, error)
-}

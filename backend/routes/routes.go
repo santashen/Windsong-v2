@@ -21,7 +21,7 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 		r.Use(cors.New(cors.Config{
 			AllowOrigins:     []string{"http://localhost:5173", "http://localhost:3000"},
 			AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-			AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-API-Key", "X-Portfolio-Password"},
+			AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-API-Key"},
 			AllowCredentials: true,
 		}))
 	}
@@ -39,16 +39,13 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 	// Initialize services
 	photoService := services.NewPhotoService(database.GetDB())
 	postService := services.NewPostService(database.GetDB(), cfg.PostsRepoURL, cfg.PostsDir)
-	portfolioService := services.NewPortfolioService(database.GetDB())
 
 	// Initialize handlers
 	photoHandler := handlers.NewPhotoHandler(photoService)
 	postHandler := handlers.NewPostHandler(postService)
-	portfolioHandler := handlers.NewPortfolioHandler(portfolioService)
 
 	// Initialize auth handler
 	authHandler := handlers.NewAuthHandler(cfg.AdminAPIKey)
-	portfolioAccessHandler := handlers.NewPortfolioAccessHandler(cfg.PortfolioAccessPassword)
 
 	// API v1 routes
 	v1 := r.Group("/api/v1")
@@ -64,11 +61,6 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 		auth := v1.Group("/auth")
 		{
 			auth.POST("/verify", authHandler.Verify)
-		}
-
-		portfolio := v1.Group("/portfolio")
-		{
-			portfolio.POST("/access/verify", portfolioAccessHandler.Verify)
 		}
 
 		// Photo routes - Public (read-only)
@@ -94,18 +86,6 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 		webhooks.Use(middleware.AdminAuth(cfg.AdminAPIKey))
 		{
 			webhooks.POST("/sync", postHandler.SyncPosts)
-		}
-
-		portfolioProtected := v1.Group("/portfolio")
-		portfolioProtected.Use(middleware.PortfolioAuth(cfg.PortfolioAccessPassword))
-		{
-			portfolioProtected.GET("/latest", portfolioHandler.GetLatestSnapshot)
-		}
-
-		adminPortfolio := v1.Group("/portfolio")
-		adminPortfolio.Use(middleware.AdminAuth(cfg.AdminAPIKey))
-		{
-			adminPortfolio.POST("/snapshots", portfolioHandler.CreateSnapshot)
 		}
 	}
 }
