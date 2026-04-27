@@ -6,10 +6,16 @@
         <h1>家庭投资组合管理</h1>
         <p>维护组合、资产、持仓、投资逻辑和历史净值。写操作使用当前登录的 ADMIN API KEY。</p>
       </div>
-      <button class="refresh-btn" @click="loadAll" :disabled="loading">{{ loading ? '刷新中...' : '刷新数据' }}</button>
+      <div class="hero-actions">
+        <button class="ghost-btn" type="button" @click="triggerMarketSync" :disabled="syncingMarket">
+          {{ syncingMarket ? '同步中...' : '立即同步行情' }}
+        </button>
+        <button class="refresh-btn" @click="loadAll" :disabled="loading">{{ loading ? '刷新中...' : '刷新数据' }}</button>
+      </div>
     </section>
 
     <section v-if="error" class="admin-error">{{ error }}</section>
+    <section v-if="syncMessage" class="admin-success">{{ syncMessage }}</section>
 
     <section class="admin-layout-grid">
       <div class="admin-column">
@@ -96,7 +102,10 @@
                 </label>
                 <label><span>投入金额</span><input v-model="holdingForm.invested_amount" type="number" step="0.0001" min="0" required /></label>
                 <label><span>份额</span><input v-model="holdingForm.share_count" type="number" step="0.0001" min="0" required /></label>
-                <label><span>平均成本</span><input v-model="holdingForm.average_cost" type="number" step="0.0001" min="0" required /></label>
+                <label>
+                  <span>平均成本（自动计算）</span>
+                  <input :value="holdingAverageCostDisplay" type="number" step="0.0001" min="0" readonly />
+                </label>
                 <label><span>权重 (%)</span><input v-model="holdingForm.weight_percentage" type="number" step="0.0001" min="0" max="100" required /></label>
                 <button class="submit-btn" type="submit">{{ editingHoldingId ? '更新持仓' : '新增持仓' }}</button>
               </form>
@@ -171,6 +180,23 @@
                 </button>
               </div>
             </article>
+
+            <article class="soft-panel">
+              <div class="sub-head"><h3>同步日志</h3></div>
+              <div v-if="syncLogs.length" class="table-mini">
+                <div v-for="log in syncLogs" :key="log.id" class="table-row table-row--static">
+                  <div>
+                    <strong>{{ formatSyncStatus(log) }}</strong>
+                    <span>
+                      {{ formatDateTime(log.started_at) }} · 资产 {{ log.asset_success_count }}/{{ log.asset_update_count }} ·
+                      组合 {{ log.portfolio_success_count }}/{{ log.portfolio_update_count }}
+                    </span>
+                    <span v-if="log.error_message" class="sync-error-text">{{ log.error_message }}</span>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="empty-admin empty-admin--compact">暂无同步日志。</div>
+            </article>
           </div>
 
           <div v-else class="empty-admin">选择一个组合后开始维护持仓和净值。</div>
@@ -185,9 +211,12 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { adminPortfolioApi } from '@/api/familyPortfolio'
 
 const loading = ref(false)
+const syncingMarket = ref(false)
 const error = ref('')
+const syncMessage = ref('')
 const portfolios = ref([])
 const assets = ref([])
+const syncLogs = ref([])
 const selectedPortfolioId = ref(null)
 const selectedPortfolioDetail = ref(null)
 
@@ -210,7 +239,6 @@ const holdingForm = ref({
   asset_id: '',
   invested_amount: '0',
   share_count: '0',
-  average_cost: '0',
   weight_percentage: '0'
 })
 const thesisForm = ref({
@@ -232,6 +260,8 @@ const performanceForm = ref({
 const holdingsWithThesis = computed(() =>
   (selectedPortfolioDetail.value?.holdings || []).filter(item => item.investment_thesis)
 )
+
+const holdingAverageCostDisplay = computed(() => calculateAverageCost(holdingForm.value.invested_amount, holdingForm.value.share_count))
 
 function getHoldingAssetId(item) {
   const rawAssetId = item?.holding?.asset_id ?? item?.asset?.id ?? null
@@ -274,6 +304,41 @@ function normalizeNullableNumber(value) {
   return value === '' || value === null || value === undefined ? null : value
 }
 
+function formatDateTime(value) {
+  if (!value) {
+    return '--'
+  }
+  return new Date(value).toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+function formatSyncStatus(log) {
+  const statusMap = {
+    running: '运行中',
+    success: '同步成功',
+    failed: '同步失败'
+  }
+  const typeMap = {
+    manual: '手动',
+    scheduled: '定时'
+  }
+  return `${typeMap[log.run_type] || log.run_type} · ${statusMap[log.status] || log.status}`
+}
+
+function calculateAverageCost(investedAmount, shareCount) {
+  const invested = Number(investedAmount || 0)
+  const shares = Number(shareCount || 0)
+  if (shares <= 0) {
+    return '0.0000'
+  }
+  return (invested / shares).toFixed(4)
+}
+
 function resetPortfolioForm() {
   editingPortfolioId.value = null
   portfolioForm.value = { name: '', total_principal: '0', currency: 'CNY' }
@@ -297,7 +362,6 @@ function resetHoldingForm() {
     asset_id: '',
     invested_amount: '0',
     share_count: '0',
-    average_cost: '0',
     weight_percentage: '0'
   }
 }
@@ -315,7 +379,6 @@ function syncHoldingFormByAsset(assetId) {
       asset_id: getHoldingAssetId(existingHolding),
       invested_amount: existingHolding.holding.invested_amount,
       share_count: existingHolding.holding.share_count,
-      average_cost: existingHolding.holding.average_cost,
       weight_percentage: existingHolding.holding.weight_percentage
     }
     return
@@ -326,7 +389,6 @@ function syncHoldingFormByAsset(assetId) {
     asset_id: Number(assetId),
     invested_amount: '0',
     share_count: '0',
-    average_cost: '0',
     weight_percentage: '0'
   }
 }
@@ -391,12 +453,14 @@ async function loadAll() {
   loading.value = true
   error.value = ''
   try {
-    const [portfolioResponse, assetResponse] = await Promise.all([
+    const [portfolioResponse, assetResponse, syncLogResponse] = await Promise.all([
       adminPortfolioApi.listPortfolios(),
-      adminPortfolioApi.listAssets()
+      adminPortfolioApi.listAssets(),
+      adminPortfolioApi.listSyncLogs()
     ])
     portfolios.value = portfolioResponse.data?.items || []
     assets.value = assetResponse.data?.items || []
+    syncLogs.value = syncLogResponse.data?.items || []
 
     if (!selectedPortfolioId.value && portfolios.value.length) {
       selectedPortfolioId.value = portfolios.value[0].id
@@ -408,6 +472,24 @@ async function loadAll() {
     error.value = requestError?.response?.data?.detail || requestError?.message || '请求失败'
   } finally {
     loading.value = false
+  }
+}
+
+async function triggerMarketSync() {
+  syncingMarket.value = true
+  error.value = ''
+  syncMessage.value = ''
+  try {
+    const response = await adminPortfolioApi.syncMarket()
+    const syncLog = response.data?.sync_log
+    syncMessage.value = syncLog
+      ? `行情同步完成：${formatSyncStatus(syncLog)}`
+      : '行情同步已完成。'
+    await loadAll()
+  } catch (requestError) {
+    error.value = requestError?.response?.data?.detail || requestError?.message || '行情同步失败'
+  } finally {
+    syncingMarket.value = false
   }
 }
 
@@ -447,7 +529,6 @@ async function submitHolding() {
     asset_id: Number(holdingForm.value.asset_id),
     invested_amount: holdingForm.value.invested_amount,
     share_count: holdingForm.value.share_count,
-    average_cost: holdingForm.value.average_cost,
     weight_percentage: holdingForm.value.weight_percentage
   }
   if (editingHoldingId.value) {
@@ -522,7 +603,6 @@ function editHolding(item) {
     asset_id: item.holding.asset_id,
     invested_amount: item.holding.invested_amount,
     share_count: item.holding.share_count,
-    average_cost: item.holding.average_cost,
     weight_percentage: item.holding.weight_percentage
   }
 }
@@ -662,6 +742,12 @@ onMounted(loadAll)
   margin-top: 0.45rem;
 }
 
+.hero-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 .refresh-btn,
 .submit-btn,
 .ghost-btn {
@@ -689,6 +775,14 @@ onMounted(loadAll)
   margin-bottom: 1rem;
   padding: 1rem 1.25rem;
   color: #b91c1c;
+}
+
+.admin-success {
+  margin-bottom: 1rem;
+  padding: 1rem 1.25rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
 }
 
 .admin-layout-grid {
@@ -794,6 +888,24 @@ textarea {
   color: #64748b;
 }
 
+.table-row--static {
+  align-items: flex-start;
+  cursor: default;
+}
+
+.table-row--static > div {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.sync-error-text {
+  color: #b91c1c !important;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .row-actions {
   color: #b91c1c;
   font-size: 0.85rem;
@@ -822,6 +934,10 @@ textarea {
   padding: 1.5rem 0;
 }
 
+.empty-admin--compact {
+  padding: 0.5rem 0;
+}
+
 @media (max-width: 1120px) {
   .admin-layout-grid,
   .sub-grid {
@@ -833,6 +949,10 @@ textarea {
   .admin-hero {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .hero-actions {
+    width: 100%;
   }
 }
 </style>

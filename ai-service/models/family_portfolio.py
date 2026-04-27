@@ -88,6 +88,23 @@ class PerformanceHistoryRecord(PerformanceHistoryBase):
     updated_at: datetime
 
 
+class MarketSyncLogRecord(BaseModel):
+    id: int
+    run_type: str = Field(min_length=1, max_length=20)
+    status: str = Field(min_length=1, max_length=20)
+    triggered_by: str | None = Field(default=None, max_length=50)
+    asset_update_count: int = Field(ge=0)
+    asset_success_count: int = Field(ge=0)
+    portfolio_update_count: int = Field(ge=0)
+    portfolio_success_count: int = Field(ge=0)
+    details_json: dict | None = None
+    error_message: str | None = None
+    started_at: datetime
+    finished_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
 class PortfolioHoldingView(BaseModel):
     holding: HoldingRecord
     asset: AssetRecord

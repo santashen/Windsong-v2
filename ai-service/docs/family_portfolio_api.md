@@ -86,6 +86,21 @@ Base path: `/api/family-portfolio`
 - Purpose: delete one holding by id.
 - Service: `FamilyPortfolioService.delete_holding`
 
+### `POST /sync/market`
+- Purpose: trigger one immediate market sync for all family portfolio assets.
+- Service: `FamilyPortfolioMarketSyncService.sync_all_portfolios`
+- Notes:
+  - updates `assets.current_price`
+  - recomputes latest `portfolio_nav`
+  - recalculates and upserts `benchmark_nav` using沪深300
+
+### `GET /sync/logs`
+- Purpose: list recent market sync logs.
+- Service: `FamilyPortfolioMarketSyncService.list_recent_sync_logs`
+- Notes:
+  - requires `ADMIN_API_KEY`
+  - returns latest scheduled and manual sync runs
+
 ### `POST /investment-theses`
 - Purpose: create one thesis row for an asset.
 - Service: `FamilyPortfolioService.create_investment_thesis`
@@ -117,3 +132,4 @@ Base path: `/api/family-portfolio`
 - Portfolio detail currently returns the latest thesis per asset, ordered by `updated_at DESC, id DESC`.
 - All write operations (`POST`, `PUT`, `DELETE`) require admin auth through `X-API-Key: <ADMIN_API_KEY>` or `Authorization: Bearer <ADMIN_API_KEY>`.
 - If `ADMIN_API_KEY` is empty, write auth is skipped to match the existing backend development behavior.
+- Nightly market sync runs by default at `23:00` in `Asia/Shanghai`, configurable via `FAMILY_PORTFOLIO_SYNC_ENABLED`, `FAMILY_PORTFOLIO_SYNC_HOUR`, `FAMILY_PORTFOLIO_SYNC_MINUTE`, `FAMILY_PORTFOLIO_SYNC_TIMEZONE`, and `FAMILY_PORTFOLIO_BENCHMARK_SYMBOL`.

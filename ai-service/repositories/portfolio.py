@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from database import get_db_connection
+from psycopg.types.json import Jsonb
 from models import (
     AssetBase,
     AssetRecord,
@@ -10,6 +11,7 @@ from models import (
     HoldingRecord,
     InvestmentThesisBase,
     InvestmentThesisRecord,
+    MarketSyncLogRecord,
     PerformanceHistoryBase,
     PerformanceHistoryRecord,
     PortfolioAggregateView,
@@ -20,6 +22,119 @@ from models import (
 
 
 class FamilyPortfolioRepository:
+    def create_market_sync_log(
+        self,
+        *,
+        run_type: str,
+        status: str,
+        triggered_by: str | None,
+        asset_update_count: int = 0,
+        asset_success_count: int = 0,
+        portfolio_update_count: int = 0,
+        portfolio_success_count: int = 0,
+        details_json: dict[str, Any] | None = None,
+        error_message: str | None = None,
+    ) -> MarketSyncLogRecord:
+        query = """
+            INSERT INTO family_portfolio_market_sync_logs (
+                run_type,
+                status,
+                triggered_by,
+                asset_update_count,
+                asset_success_count,
+                portfolio_update_count,
+                portfolio_success_count,
+                details_json,
+                error_message
+            )
+            VALUES (
+                %(run_type)s,
+                %(status)s,
+                %(triggered_by)s,
+                %(asset_update_count)s,
+                %(asset_success_count)s,
+                %(portfolio_update_count)s,
+                %(portfolio_success_count)s,
+                %(details_json)s,
+                %(error_message)s
+            )
+            RETURNING id, run_type, status, triggered_by, asset_update_count, asset_success_count,
+                      portfolio_update_count, portfolio_success_count, details_json, error_message,
+                      started_at, finished_at, created_at, updated_at
+        """
+        payload = {
+            "run_type": run_type,
+            "status": status,
+            "triggered_by": triggered_by,
+            "asset_update_count": asset_update_count,
+            "asset_success_count": asset_success_count,
+            "portfolio_update_count": portfolio_update_count,
+            "portfolio_success_count": portfolio_success_count,
+            "details_json": Jsonb(details_json) if details_json is not None else None,
+            "error_message": error_message,
+        }
+        with get_db_connection() as connection, connection.cursor() as cursor:
+            cursor.execute(query, payload)
+            row = cursor.fetchone()
+        return MarketSyncLogRecord.model_validate(row)
+
+    def update_market_sync_log(
+        self,
+        log_id: int,
+        *,
+        status: str,
+        asset_update_count: int,
+        asset_success_count: int,
+        portfolio_update_count: int,
+        portfolio_success_count: int,
+        details_json: dict[str, Any] | None,
+        error_message: str | None = None,
+    ) -> MarketSyncLogRecord | None:
+        query = """
+            UPDATE family_portfolio_market_sync_logs
+            SET
+                status = %(status)s,
+                asset_update_count = %(asset_update_count)s,
+                asset_success_count = %(asset_success_count)s,
+                portfolio_update_count = %(portfolio_update_count)s,
+                portfolio_success_count = %(portfolio_success_count)s,
+                details_json = %(details_json)s,
+                error_message = %(error_message)s,
+                finished_at = NOW()
+            WHERE id = %(log_id)s
+            RETURNING id, run_type, status, triggered_by, asset_update_count, asset_success_count,
+                      portfolio_update_count, portfolio_success_count, details_json, error_message,
+                      started_at, finished_at, created_at, updated_at
+        """
+        payload = {
+            "log_id": log_id,
+            "status": status,
+            "asset_update_count": asset_update_count,
+            "asset_success_count": asset_success_count,
+            "portfolio_update_count": portfolio_update_count,
+            "portfolio_success_count": portfolio_success_count,
+            "details_json": Jsonb(details_json) if details_json is not None else None,
+            "error_message": error_message,
+        }
+        with get_db_connection() as connection, connection.cursor() as cursor:
+            cursor.execute(query, payload)
+            row = cursor.fetchone()
+        return MarketSyncLogRecord.model_validate(row) if row else None
+
+    def list_market_sync_logs(self, limit: int = 20) -> list[MarketSyncLogRecord]:
+        query = """
+            SELECT id, run_type, status, triggered_by, asset_update_count, asset_success_count,
+                   portfolio_update_count, portfolio_success_count, details_json, error_message,
+                   started_at, finished_at, created_at, updated_at
+            FROM family_portfolio_market_sync_logs
+            ORDER BY started_at DESC, id DESC
+            LIMIT %(limit)s
+        """
+        with get_db_connection(autocommit=True) as connection, connection.cursor() as cursor:
+            cursor.execute(query, {"limit": limit})
+            rows = cursor.fetchall()
+        return [MarketSyncLogRecord.model_validate(row) for row in rows]
+
     def create_portfolio(self, portfolio: PortfolioBase) -> PortfolioRecord:
         query = """
             INSERT INTO portfolios (name, total_principal, currency)
@@ -146,6 +261,18 @@ class FamilyPortfolioRepository:
             row = cursor.fetchone()
         return AssetRecord.model_validate(row) if row else None
 
+    def update_asset_current_price(self, asset_id: int, current_price: float) -> AssetRecord | None:
+        query = """
+            UPDATE assets
+            SET current_price = %(current_price)s
+            WHERE id = %(asset_id)s
+            RETURNING id, ticker_code, name, sector, asset_type, icon_name, current_price, created_at, updated_at
+        """
+        with get_db_connection() as connection, connection.cursor() as cursor:
+            cursor.execute(query, {"asset_id": asset_id, "current_price": current_price})
+            row = cursor.fetchone()
+        return AssetRecord.model_validate(row) if row else None
+
     def delete_asset(self, asset_id: int) -> bool:
         query = """
             DELETE FROM assets
@@ -171,14 +298,22 @@ class FamilyPortfolioRepository:
                 %(asset_id)s,
                 %(invested_amount)s,
                 %(share_count)s,
-                %(average_cost)s,
+                CASE
+                    WHEN %(share_count)s > 0
+                    THEN ROUND((%(invested_amount)s / %(share_count)s)::numeric, 4)
+                    ELSE 0
+                END,
                 %(weight_percentage)s
             )
             ON CONFLICT (portfolio_id, asset_id) DO UPDATE
             SET
                 invested_amount = EXCLUDED.invested_amount,
                 share_count = EXCLUDED.share_count,
-                average_cost = EXCLUDED.average_cost,
+                average_cost = CASE
+                    WHEN EXCLUDED.share_count > 0
+                    THEN ROUND((EXCLUDED.invested_amount / EXCLUDED.share_count)::numeric, 4)
+                    ELSE 0
+                END,
                 weight_percentage = EXCLUDED.weight_percentage
             RETURNING id, portfolio_id, asset_id, invested_amount, share_count, average_cost, weight_percentage, created_at, updated_at
         """
@@ -195,7 +330,11 @@ class FamilyPortfolioRepository:
                 asset_id = %(asset_id)s,
                 invested_amount = %(invested_amount)s,
                 share_count = %(share_count)s,
-                average_cost = %(average_cost)s,
+                average_cost = CASE
+                    WHEN %(share_count)s > 0
+                    THEN ROUND((%(invested_amount)s / %(share_count)s)::numeric, 4)
+                    ELSE 0
+                END,
                 weight_percentage = %(weight_percentage)s
             WHERE id = %(holding_id)s
             RETURNING id, portfolio_id, asset_id, invested_amount, share_count, average_cost, weight_percentage, created_at, updated_at
@@ -333,6 +472,18 @@ class FamilyPortfolioRepository:
             cursor.execute(query, payload)
             row = cursor.fetchone()
         return PerformanceHistoryRecord.model_validate(row) if row else None
+
+    def list_performance_history(self, portfolio_id: int) -> list[PerformanceHistoryRecord]:
+        query = """
+            SELECT id, portfolio_id, record_date, portfolio_nav, benchmark_nav, created_at, updated_at
+            FROM performance_history
+            WHERE portfolio_id = %(portfolio_id)s
+            ORDER BY record_date
+        """
+        with get_db_connection(autocommit=True) as connection, connection.cursor() as cursor:
+            cursor.execute(query, {"portfolio_id": portfolio_id})
+            rows = cursor.fetchall()
+        return [PerformanceHistoryRecord.model_validate(row) for row in rows]
 
     def delete_performance_history(self, history_id: int) -> bool:
         query = """

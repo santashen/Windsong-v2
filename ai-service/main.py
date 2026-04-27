@@ -11,6 +11,8 @@ from logging_config import configure_logging
 from models import AssetBase, HoldingBase, InvestmentThesisBase, PerformanceHistoryBase, PortfolioBase
 from services.base_llm import OpenAICompatibleService
 from services.family_portfolio import FamilyPortfolioService
+from services.family_portfolio_market_sync import FamilyPortfolioMarketSyncService
+from services.family_portfolio_scheduler import FamilyPortfolioScheduler
 from services.valuation_backtest import ValuationBacktestService
 
 configure_logging()
@@ -63,6 +65,18 @@ llm_service = OpenAICompatibleService(
 )
 valuation_service = ValuationBacktestService()
 family_portfolio_service = FamilyPortfolioService()
+family_portfolio_market_sync_service = FamilyPortfolioMarketSyncService()
+family_portfolio_scheduler = FamilyPortfolioScheduler(sync_service=family_portfolio_market_sync_service)
+
+
+@app.on_event("startup")
+async def startup_family_portfolio_scheduler():
+    await family_portfolio_scheduler.start()
+
+
+@app.on_event("shutdown")
+async def shutdown_family_portfolio_scheduler():
+    await family_portfolio_scheduler.stop()
 
 
 @app.get("/health")
@@ -207,6 +221,27 @@ async def delete_family_holding(holding_id: int, _: None = Depends(verify_admin_
     except Exception as exc:
         logger.exception("delete family holding failed", holding_id=holding_id)
         raise HTTPException(status_code=500, detail=f"删除持仓失败: {str(exc)}") from exc
+
+
+@app.post("/api/family-portfolio/sync/market")
+async def sync_family_portfolio_market(_: None = Depends(verify_admin_api_key)):
+    try:
+        return family_portfolio_market_sync_service.sync_all_portfolios_with_logging(
+            run_type="manual",
+            triggered_by="admin_api",
+        )
+    except Exception as exc:
+        logger.exception("sync family portfolio market failed")
+        raise HTTPException(status_code=500, detail=f"同步家庭投资组合行情失败: {str(exc)}") from exc
+
+
+@app.get("/api/family-portfolio/sync/logs")
+async def list_family_portfolio_sync_logs(_: None = Depends(verify_admin_api_key)):
+    try:
+        return family_portfolio_market_sync_service.list_recent_sync_logs()
+    except Exception as exc:
+        logger.exception("list family portfolio sync logs failed")
+        raise HTTPException(status_code=500, detail=f"读取同步日志失败: {str(exc)}") from exc
 
 
 @app.post("/api/family-portfolio/investment-theses")

@@ -67,6 +67,12 @@ export const adminPortfolioApi = {
   deleteHolding(id) {
     return familyPortfolioApi.delete(`/holdings/${id}`, { headers: getAuthHeaders() })
   },
+  syncMarket() {
+    return familyPortfolioApi.post('/sync/market', {}, { headers: getAuthHeaders() })
+  },
+  listSyncLogs() {
+    return familyPortfolioApi.get('/sync/logs', { headers: getAuthHeaders() })
+  },
   createInvestmentThesis(data) {
     return familyPortfolioApi.post('/investment-theses', data, { headers: getAuthHeaders() })
   },
