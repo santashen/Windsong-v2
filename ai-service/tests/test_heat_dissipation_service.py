@@ -82,6 +82,66 @@ class HeatDissipationServiceTest(unittest.TestCase):
         self.assertEqual(result.index, 1)
         self.assertAlmostEqual(result.qW, expected_q_w)
 
+    def test_calculate_water_batch_rows_with_mass_flow(self):
+        payload = HeatDissipationRequest(
+            fluid="Water",
+            pressure=UnitValue(value=101.325, unit="kPa"),
+            flowRate=UnitValue(value=0.1, unit="kg/s"),
+            rows=[
+                TemperatureRowInput(tinC=25, toutC=35),
+                TemperatureRowInput(tinC=26, toutC=36),
+                TemperatureRowInput(tinC=27, toutC=37),
+            ],
+        )
+
+        response = self.service.calculate(payload)
+
+        self.assertEqual(len(response.results), 3)
+        self.assertEqual([row.index for row in response.results], [1, 2, 3])
+        self.assertTrue(all(row.qW > 0 for row in response.results))
+
+    def test_calculate_tin_equals_tout_returns_zero(self):
+        payload = HeatDissipationRequest(
+            fluid="Water",
+            pressure=UnitValue(value=101.325, unit="kPa"),
+            flowRate=UnitValue(value=0.1, unit="kg/s"),
+            rows=[TemperatureRowInput(tinC=25, toutC=25)],
+        )
+
+        response = self.service.calculate(payload)
+
+        self.assertAlmostEqual(response.results[0].qW, 0)
+
+    def test_calculate_volume_flow_uses_inlet_density(self):
+        payload = HeatDissipationRequest(
+            fluid="Water",
+            pressure=UnitValue(value=101.325, unit="kPa"),
+            flowRate=UnitValue(value=60, unit="L/min"),
+            rows=[TemperatureRowInput(tinC=25, toutC=35)],
+        )
+
+        response = self.service.calculate(payload)
+        rho = PropsSI("D", "T", 298.15, "P", 101325, "Water")
+        expected_mass_flow = rho * (60 / 1000 / 60)
+        expected_q_w = expected_mass_flow * (
+            PropsSI("H", "T", 308.15, "P", 101325, "Water")
+            - PropsSI("H", "T", 298.15, "P", 101325, "Water")
+        )
+
+        self.assertAlmostEqual(response.results[0].qW, expected_q_w)
+
+    def test_calculate_symbol_volume_flow_unit(self):
+        payload = HeatDissipationRequest(
+            fluid="Water",
+            pressure=UnitValue(value=101.325, unit="kPa"),
+            flowRate=UnitValue(value=3.6, unit="m³/h"),
+            rows=[TemperatureRowInput(tinC=25, toutC=35)],
+        )
+
+        response = self.service.calculate(payload)
+
+        self.assertGreater(response.results[0].qW, 0)
+
 
 if __name__ == "__main__":
     unittest.main()

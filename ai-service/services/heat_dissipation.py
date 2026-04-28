@@ -44,12 +44,18 @@ class HeatDissipationService:
 
         fluid = payload.fluid.strip()
         pressure_pa = self.convert_pressure_to_pa(payload.pressure)
-        mass_flow_kg_per_s = self.convert_flow_rate_to_kg_per_s(payload.flowRate)
         results = []
 
         for index, row in enumerate(payload.rows, start=1):
             tin_k = self.convert_temperature_c_to_k(row.tinC)
             tout_k = self.convert_temperature_c_to_k(row.toutC)
+            mass_flow_kg_per_s = self.get_mass_flow_kg_per_s(
+                payload.flowRate,
+                fluid,
+                tin_k,
+                pressure_pa,
+                index,
+            )
             h_in = self.get_enthalpy_j_per_kg(fluid, tin_k, pressure_pa, index)
             h_out = self.get_enthalpy_j_per_kg(fluid, tout_k, pressure_pa, index)
             q_w = mass_flow_kg_per_s * (h_out - h_in)
@@ -80,8 +86,11 @@ class HeatDissipationService:
         self.convert_pressure_to_pa(payload.pressure)
         if payload.flowRate.unit == FlowRateUnit.KG_PER_S.value:
             self.convert_flow_rate_to_kg_per_s(payload.flowRate)
-        else:
-            raise HeatDissipationError("INVALID_FLOW_RATE", "流量单位无效")
+            return
+        if payload.flowRate.unit in VOLUME_FLOW_TO_M3_PER_S:
+            self.convert_volume_flow_to_m3_per_s(payload.flowRate)
+            return
+        raise HeatDissipationError("INVALID_FLOW_RATE", "流量单位无效")
 
     def convert_pressure_to_pa(self, pressure: UnitValue) -> float:
         multiplier = PRESSURE_TO_PA.get(pressure.unit)
@@ -118,6 +127,19 @@ class HeatDissipationService:
             return self.convert_volume_flow_to_m3_per_s(flow_rate) * density_kg_per_m3
         raise HeatDissipationError("INVALID_FLOW_RATE", "流量单位无效")
 
+    def get_mass_flow_kg_per_s(
+        self,
+        flow_rate: UnitValue,
+        fluid: str,
+        tin_k: float,
+        pressure_pa: float,
+        row_index: int | None = None,
+    ) -> float:
+        if flow_rate.unit == FlowRateUnit.KG_PER_S.value:
+            return self.convert_flow_rate_to_kg_per_s(flow_rate)
+        density_kg_per_m3 = self.get_density_kg_per_m3(fluid, tin_k, pressure_pa, row_index)
+        return self.convert_flow_rate_to_kg_per_s(flow_rate, density_kg_per_m3)
+
     def get_enthalpy_j_per_kg(
         self,
         fluid: str,
@@ -127,6 +149,24 @@ class HeatDissipationService:
     ) -> float:
         try:
             return float(PropsSI("H", "T", temperature_k, "P", pressure_pa, fluid))
+        except ValueError as exc:
+            if "key" in str(exc).lower() or "fluid" in str(exc).lower():
+                raise HeatDissipationError("INVALID_FLUID", "请选择 CoolProp 支持的有效工质", row_index) from exc
+            raise HeatDissipationError(
+                "PROPERTY_RANGE_ERROR",
+                "抱歉，当前温度或压力超出了该工质的物性库数据范围",
+                row_index,
+            ) from exc
+
+    def get_density_kg_per_m3(
+        self,
+        fluid: str,
+        temperature_k: float,
+        pressure_pa: float,
+        row_index: int | None = None,
+    ) -> float:
+        try:
+            return float(PropsSI("D", "T", temperature_k, "P", pressure_pa, fluid))
         except ValueError as exc:
             if "key" in str(exc).lower() or "fluid" in str(exc).lower():
                 raise HeatDissipationError("INVALID_FLUID", "请选择 CoolProp 支持的有效工质", row_index) from exc

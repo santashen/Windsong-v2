@@ -57,6 +57,40 @@ class HeatDissipationApiTest(unittest.TestCase):
         self.assertEqual(response.json()["detail"]["code"], "INVALID_FLOW_RATE")
         self.assertEqual(response.json()["detail"]["message"], "流量不能为负数")
 
+    def test_calculate_batch_rows(self):
+        response = self.client.post(
+            "/api/heat-dissipation/calculate",
+            json={
+                "fluid": "Water",
+                "pressure": {"value": 101.325, "unit": "kPa"},
+                "flowRate": {"value": 0.1, "unit": "kg/s"},
+                "rows": [
+                    {"tinC": 25, "toutC": 35},
+                    {"tinC": 26, "toutC": 36},
+                    {"tinC": 27, "toutC": 37},
+                ],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(len(body["results"]), 3)
+        self.assertEqual([row["index"] for row in body["results"]], [1, 2, 3])
+
+    def test_calculate_with_volume_flow(self):
+        response = self.client.post(
+            "/api/heat-dissipation/calculate",
+            json={
+                "fluid": "Water",
+                "pressure": {"value": 101.325, "unit": "kPa"},
+                "flowRate": {"value": 60, "unit": "L/min"},
+                "rows": [{"tinC": 25, "toutC": 35}],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertGreater(response.json()["results"][0]["qW"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()
