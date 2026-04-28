@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 
-from CoolProp.CoolProp import PropsSI
+from CoolProp.CoolProp import PropsSI, get_global_param_string
 
 from models.heat_dissipation import (
     FlowRateUnit,
+    HeatDissipationFluidItem,
+    HeatDissipationFluidListResponse,
     HeatDissipationRequest,
     HeatDissipationResponse,
     HeatDissipationResultRow,
@@ -15,6 +18,9 @@ from models.heat_dissipation import (
 
 
 MAX_ROWS = 500
+DEFAULT_FLUID_LIMIT = 20
+MAX_FLUID_LIMIT = 50
+COMMON_FLUIDS = ["Water", "Air", "R134a", "R22", "R32", "R410A", "R1234yf", "Ammonia", "CO2"]
 
 
 @dataclass(frozen=True)
@@ -39,6 +45,35 @@ VOLUME_FLOW_TO_M3_PER_S = {
 
 
 class HeatDissipationService:
+    def search_fluids(
+        self,
+        query: str | None = None,
+        limit: int = DEFAULT_FLUID_LIMIT,
+    ) -> HeatDissipationFluidListResponse:
+        normalized_query = (query or "").strip().lower()
+        normalized_limit = min(max(limit, 1), MAX_FLUID_LIMIT)
+        fluids = self.get_supported_fluids()
+
+        if normalized_query:
+            matches = [fluid for fluid in fluids if normalized_query in fluid.lower()]
+        else:
+            common = [fluid for fluid in COMMON_FLUIDS if fluid in fluids]
+            remaining = [fluid for fluid in fluids if fluid not in common]
+            matches = common + remaining
+
+        return HeatDissipationFluidListResponse(
+            items=[
+                HeatDissipationFluidItem(name=fluid, aliases=[fluid.lower()])
+                for fluid in matches[:normalized_limit]
+            ]
+        )
+
+    @lru_cache(maxsize=1)
+    def get_supported_fluids(self) -> tuple[str, ...]:
+        fluids = get_global_param_string("fluids_list").split(",")
+        cleaned_fluids = [fluid.strip() for fluid in fluids if fluid.strip()]
+        return tuple(sorted(cleaned_fluids, key=str.lower))
+
     def calculate(self, payload: HeatDissipationRequest) -> HeatDissipationResponse:
         self.validate_request(payload)
 

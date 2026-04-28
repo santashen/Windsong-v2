@@ -87,6 +87,11 @@ async def health():
     return {"status": "ok", "service": "ai-service"}
 
 
+@app.get("/api/heat-dissipation/fluids")
+async def search_heat_dissipation_fluids(query: str | None = None, limit: int = 20):
+    return heat_dissipation_service.search_fluids(query=query, limit=limit).model_dump()
+
+
 @app.post("/api/heat-dissipation/calculate")
 async def calculate_heat_dissipation(payload: HeatDissipationRequest):
     try:

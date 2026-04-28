@@ -142,6 +142,18 @@ class HeatDissipationServiceTest(unittest.TestCase):
 
         self.assertGreater(response.results[0].qW, 0)
 
+    def test_search_fluids_by_query(self):
+        response = self.service.search_fluids("water")
+
+        self.assertIn("Water", [item.name for item in response.items])
+
+    def test_search_fluids_empty_query_returns_common_fluids_first(self):
+        response = self.service.search_fluids(limit=5)
+
+        self.assertGreater(len(response.items), 0)
+        self.assertLessEqual(len(response.items), 5)
+        self.assertEqual(response.items[0].name, "Water")
+
 
 if __name__ == "__main__":
     unittest.main()

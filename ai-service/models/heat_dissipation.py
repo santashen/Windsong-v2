@@ -62,3 +62,12 @@ class HeatDissipationResultRow(BaseModel):
 class HeatDissipationResponse(BaseModel):
     unit: str = "W"
     results: list[HeatDissipationResultRow]
+
+
+class HeatDissipationFluidItem(BaseModel):
+    name: str
+    aliases: list[str] = Field(default_factory=list)
+
+
+class HeatDissipationFluidListResponse(BaseModel):
+    items: list[HeatDissipationFluidItem]

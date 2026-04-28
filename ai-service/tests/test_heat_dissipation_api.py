@@ -91,6 +91,21 @@ class HeatDissipationApiTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertGreater(response.json()["results"][0]["qW"], 0)
 
+    def test_search_fluids_by_query(self):
+        response = self.client.get("/api/heat-dissipation/fluids", params={"query": "wat"})
+
+        self.assertEqual(response.status_code, 200)
+        names = [item["name"] for item in response.json()["items"]]
+        self.assertIn("Water", names)
+
+    def test_search_fluids_empty_query_returns_limited_items(self):
+        response = self.client.get("/api/heat-dissipation/fluids", params={"limit": 5})
+
+        self.assertEqual(response.status_code, 200)
+        items = response.json()["items"]
+        self.assertGreater(len(items), 0)
+        self.assertLessEqual(len(items), 5)
+
 
 if __name__ == "__main__":
     unittest.main()
