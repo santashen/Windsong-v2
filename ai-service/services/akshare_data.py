@@ -4,6 +4,7 @@ from contextlib import contextmanager
 import os
 
 import akshare as ak
+import akshare_proxy_patch
 import pandas as pd
 
 from config import settings
@@ -388,14 +389,6 @@ class AkshareDataService:
     def _install_proxy_patch_if_available(self) -> None:
         if getattr(self, "_proxy_initialized", False):
             return
-
-        try:
-            import akshare_proxy_patch
-        except ImportError as exc:
-            raise RuntimeError("缺少 akshare_proxy_patch，无法通过代理抓取历史行情") from exc
-
-        if not settings.AKSHARE_PROXY_TOKEN:
-            raise RuntimeError("缺少 AKSHARE_PROXY_TOKEN 环境变量，无法通过代理抓取历史行情")
 
         akshare_proxy_patch.install_patch(
             settings.AKSHARE_PROXY_HOST,
