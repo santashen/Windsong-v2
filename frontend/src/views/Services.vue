@@ -29,6 +29,7 @@
         <button class="toolbar-chip toolbar-chip--active" type="button">All</button>
         <button class="toolbar-chip" type="button">Finance</button>
         <button class="toolbar-chip" type="button">Backtests</button>
+        <button class="toolbar-chip" type="button">Thermal</button>
       </section>
 
       <section class="service-grid">
@@ -109,6 +110,17 @@ const services = [
     topics: ['A-share', 'Valuation', 'ECharts'],
     type: 'Interactive',
     output: 'Chart + JSON',
+    live: true
+  },
+  {
+    slug: 'heat-dissipation-calculator',
+    to: '/services/heat-dissipation-calculator',
+    kind: 'Thermal',
+    title: '流体换热计算',
+    description: '基于 CoolProp 焓值差计算换热量，适合实验数据的单组估算与批量处理。',
+    topics: ['CoolProp', 'Heat Transfer', 'Batch'],
+    type: 'Calculator',
+    output: 'W + CSV',
     live: true
   }
 ]
