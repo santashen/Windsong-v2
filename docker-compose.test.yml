@@ -76,12 +76,27 @@ services:
       dockerfile: Dockerfile
     container_name: windsong-ai-service-test
     environment:
+      DB_USER: windsong
+      DB_PASSWORD: windsong123
+      DB_NAME: windsong
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DATABASE_URL: host=postgres user=windsong password=windsong123 dbname=windsong port=5432 sslmode=disable
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-test-admin-key}
       LLM_API_URL: ${LLM_API_URL:-https://api.aaai.vip}
       LLM_API_KEY: ${LLM_API_KEY}
       LLM_MODEL: ${LLM_MODEL:-deepseek-r1-search}
       AKSHARE_PROXY_HOST: ${AKSHARE_PROXY_HOST:-101.201.173.125}
       AKSHARE_PROXY_TOKEN: ${AKSHARE_PROXY_TOKEN}
       AKSHARE_PROXY_RETRY: ${AKSHARE_PROXY_RETRY:-30}
+      FAMILY_PORTFOLIO_SYNC_ENABLED: ${FAMILY_PORTFOLIO_SYNC_ENABLED:-true}
+      FAMILY_PORTFOLIO_SYNC_HOUR: ${FAMILY_PORTFOLIO_SYNC_HOUR:-23}
+      FAMILY_PORTFOLIO_SYNC_MINUTE: ${FAMILY_PORTFOLIO_SYNC_MINUTE:-0}
+      FAMILY_PORTFOLIO_SYNC_TIMEZONE: ${FAMILY_PORTFOLIO_SYNC_TIMEZONE:-Asia/Shanghai}
+      FAMILY_PORTFOLIO_BENCHMARK_SYMBOL: ${FAMILY_PORTFOLIO_BENCHMARK_SYMBOL:-sh000300}
+      HOST: 0.0.0.0
+      PORT: 8000
+      ENV: production
     networks:
       - windsong-test
 
