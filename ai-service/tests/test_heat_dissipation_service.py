@@ -1,5 +1,7 @@
 import unittest
 
+from CoolProp.CoolProp import PropsSI
+
 from models.heat_dissipation import HeatDissipationRequest, TemperatureRowInput, UnitValue
 from services.heat_dissipation import HeatDissipationError, HeatDissipationService
 
@@ -60,6 +62,25 @@ class HeatDissipationServiceTest(unittest.TestCase):
         )
 
         self.service.validate_request(payload)
+
+    def test_calculate_water_single_row_with_mass_flow(self):
+        payload = HeatDissipationRequest(
+            fluid="Water",
+            pressure=UnitValue(value=101.325, unit="kPa"),
+            flowRate=UnitValue(value=0.1, unit="kg/s"),
+            rows=[TemperatureRowInput(tinC=25, toutC=35)],
+        )
+
+        response = self.service.calculate(payload)
+        result = response.results[0]
+        expected_q_w = 0.1 * (
+            PropsSI("H", "T", 308.15, "P", 101325, "Water")
+            - PropsSI("H", "T", 298.15, "P", 101325, "Water")
+        )
+
+        self.assertEqual(response.unit, "W")
+        self.assertEqual(result.index, 1)
+        self.assertAlmostEqual(result.qW, expected_q_w)
 
 
 if __name__ == "__main__":
