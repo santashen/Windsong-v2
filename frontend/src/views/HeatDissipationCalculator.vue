@@ -15,7 +15,7 @@
         <router-link class="back-link" to="/services">返回服务目录</router-link>
       </section>
 
-      <form class="workspace-shell" aria-label="换热计算工作区" @submit.prevent="calculateSingle">
+      <form class="workspace-shell" aria-label="换热计算工作区" @submit.prevent="calculateCurrent">
         <aside class="parameter-panel">
           <div class="panel-head">
             <p class="panel-title">统一工况</p>
@@ -85,11 +85,25 @@
           </div>
 
           <div class="mode-strip" aria-label="计算模式">
-            <button class="mode-pill mode-pill--active" type="button">单组计算</button>
-            <button class="mode-pill" type="button" disabled>批量计算</button>
+            <button
+              class="mode-pill"
+              :class="{ 'mode-pill--active': mode === 'single' }"
+              type="button"
+              @click="setMode('single')"
+            >
+              单组计算
+            </button>
+            <button
+              class="mode-pill"
+              :class="{ 'mode-pill--active': mode === 'batch' }"
+              type="button"
+              @click="setMode('batch')"
+            >
+              批量计算
+            </button>
           </div>
 
-          <div class="temperature-grid">
+          <div v-if="mode === 'single'" class="temperature-grid">
             <label class="field">
               <span>入口温度 Tin</span>
               <input v-model.number="form.tinC" type="number" step="any" />
@@ -98,6 +112,20 @@
               <span>出口温度 Tout</span>
               <input v-model.number="form.toutC" type="number" step="any" />
             </label>
+          </div>
+
+          <div v-else class="batch-grid">
+            <label class="field">
+              <span>入口温度列</span>
+              <textarea v-model="batchTinText" spellcheck="false" placeholder="25.1&#10;25.2&#10;25.3"></textarea>
+            </label>
+            <label class="field">
+              <span>出口温度列</span>
+              <textarea v-model="batchToutText" spellcheck="false" placeholder="30.1&#10;30.2&#10;30.3"></textarea>
+            </label>
+            <p class="row-count">
+              Tin {{ parsedBatchInfo.tinCount }} 个，Tout {{ parsedBatchInfo.toutCount }} 个
+            </p>
           </div>
 
           <button class="submit-button" type="submit" :disabled="isLoading">
@@ -113,23 +141,49 @@
             <p class="panel-note">Q = m_dot × (h_out - h_in)</p>
           </div>
 
-          <div class="result-value" :class="{ 'result-value--empty': !singleResult }">
+          <div class="result-value" :class="{ 'result-value--empty': !primaryResult }">
             <span>Q</span>
-            <strong>{{ singleResult?.qDisplay || '--' }}</strong>
+            <strong>{{ primaryResult?.qDisplay || '--' }}</strong>
           </div>
 
-          <div class="result-meta">
+          <div v-if="mode === 'single'" class="result-meta">
             <div>
               <span>Tin</span>
-              <strong>{{ singleResult ? `${singleResult.tinC} °C` : '--' }}</strong>
+              <strong>{{ primaryResult ? `${primaryResult.tinC} °C` : '--' }}</strong>
             </div>
             <div>
               <span>Tout</span>
-              <strong>{{ singleResult ? `${singleResult.toutC} °C` : '--' }}</strong>
+              <strong>{{ primaryResult ? `${primaryResult.toutC} °C` : '--' }}</strong>
             </div>
             <div>
               <span>Q</span>
-              <strong>{{ singleResult ? `${formatNumber(singleResult.qW)} W` : '--' }}</strong>
+              <strong>{{ primaryResult ? `${formatNumber(primaryResult.qW)} W` : '--' }}</strong>
+            </div>
+          </div>
+
+          <div v-else class="batch-result">
+            <p class="batch-summary">
+              {{ batchResults.length ? `${batchResults.length} 行结果` : '等待批量计算' }}
+            </p>
+            <div v-if="batchResults.length" class="result-table-wrap">
+              <table class="result-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Tin °C</th>
+                    <th>Tout °C</th>
+                    <th>Q W</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="row in batchResults" :key="row.index">
+                    <td>{{ row.index }}</td>
+                    <td>{{ formatNumber(row.tinC) }}</td>
+                    <td>{{ formatNumber(row.toutC) }}</td>
+                    <td>{{ formatNumber(row.qW) }}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </aside>
@@ -141,7 +195,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 
 import { calculateHeatDissipation, searchHeatDissipationFluids } from '@/api/heatDissipation'
 import Footer from '@/components/layout/Footer.vue'
@@ -154,6 +208,10 @@ const showFluidSuggestions = ref(false)
 const isLoading = ref(false)
 const errorMessage = ref('')
 const singleResult = ref(null)
+const batchResults = ref([])
+const mode = ref('single')
+const batchTinText = ref('25.1\n25.2\n25.3')
+const batchToutText = ref('30.1\n30.2\n30.3')
 
 const form = reactive({
   pressureValue: 101.325,
@@ -166,6 +224,22 @@ const form = reactive({
 
 let fluidSearchTimer = null
 let isSelectingFluid = false
+
+const primaryResult = computed(() => {
+  if (mode.value === 'single') {
+    return singleResult.value
+  }
+  return batchResults.value[0] || null
+})
+
+const parsedBatchInfo = computed(() => {
+  const tin = parseNumberList(batchTinText.value)
+  const tout = parseNumberList(batchToutText.value)
+  return {
+    tinCount: tin.values.length,
+    toutCount: tout.values.length
+  }
+})
 
 function isFiniteNumber(value) {
   return Number.isFinite(Number(value))
@@ -186,6 +260,32 @@ function getRequestErrorMessage(error) {
     return detail.rowIndex ? `第 ${detail.rowIndex} 行：${detail.message}` : detail.message
   }
   return error?.message || '换热量计算失败，请稍后重试'
+}
+
+function setMode(nextMode) {
+  mode.value = nextMode
+  errorMessage.value = ''
+}
+
+function parseNumberList(text) {
+  const tokens = String(text || '')
+    .split(/[\s,]+/)
+    .map(token => token.trim())
+    .filter(Boolean)
+  const values = []
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const value = Number(tokens[index])
+    if (!Number.isFinite(value)) {
+      return {
+        values,
+        error: `第 ${index + 1} 行温度数据无法识别，请检查输入格式`
+      }
+    }
+    values.push(value)
+  }
+
+  return { values, error: '' }
 }
 
 async function loadFluidSuggestions(query = fluidQuery.value) {
@@ -218,6 +318,20 @@ function hideFluidSuggestionsSoon() {
 }
 
 function validateSingleInput() {
+  const commonError = validateCommonInput()
+  if (commonError) {
+    return commonError
+  }
+  if (!isFiniteNumber(form.tinC)) {
+    return '入口温度数据无法识别，请检查输入格式'
+  }
+  if (!isFiniteNumber(form.toutC)) {
+    return '出口温度数据无法识别，请检查输入格式'
+  }
+  return ''
+}
+
+function validateCommonInput() {
   if (!selectedFluid.value || fluidQuery.value !== selectedFluid.value) {
     return '请选择 CoolProp 支持的有效工质'
   }
@@ -227,13 +341,30 @@ function validateSingleInput() {
   if (!isFiniteNumber(form.flowValue) || Number(form.flowValue) < 0) {
     return '流量不能为负数'
   }
-  if (!isFiniteNumber(form.tinC)) {
-    return '入口温度数据无法识别，请检查输入格式'
-  }
-  if (!isFiniteNumber(form.toutC)) {
-    return '出口温度数据无法识别，请检查输入格式'
-  }
   return ''
+}
+
+function buildCommonPayload(rows) {
+  return {
+    fluid: selectedFluid.value,
+    pressure: {
+      value: Number(form.pressureValue),
+      unit: form.pressureUnit
+    },
+    flowRate: {
+      value: Number(form.flowValue),
+      unit: form.flowUnit
+    },
+    rows
+  }
+}
+
+async function calculateCurrent() {
+  if (mode.value === 'batch') {
+    await calculateBatch()
+    return
+  }
+  await calculateSingle()
 }
 
 async function calculateSingle() {
@@ -248,26 +379,71 @@ async function calculateSingle() {
 
   isLoading.value = true
   try {
-    const response = await calculateHeatDissipation({
-      fluid: selectedFluid.value,
-      pressure: {
-        value: Number(form.pressureValue),
-        unit: form.pressureUnit
-      },
-      flowRate: {
-        value: Number(form.flowValue),
-        unit: form.flowUnit
-      },
-      rows: [
+    const response = await calculateHeatDissipation(
+      buildCommonPayload([
         {
           tinC: Number(form.tinC),
           toutC: Number(form.toutC)
         }
-      ]
-    })
+      ])
+    )
     singleResult.value = response.data?.results?.[0] || null
   } catch (error) {
     errorMessage.value = getRequestErrorMessage(error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+function buildBatchRows() {
+  const commonError = validateCommonInput()
+  if (commonError) {
+    return { rows: [], error: commonError }
+  }
+
+  const tin = parseNumberList(batchTinText.value)
+  if (tin.error) {
+    return { rows: [], error: tin.error }
+  }
+  const tout = parseNumberList(batchToutText.value)
+  if (tout.error) {
+    return { rows: [], error: tout.error }
+  }
+  if (!tin.values.length || !tout.values.length) {
+    return { rows: [], error: '请至少输入一组温度数据' }
+  }
+  if (tin.values.length !== tout.values.length) {
+    return {
+      rows: [],
+      error: '入口温度和出口温度的数据数量不一致，请检查粘贴内容'
+    }
+  }
+
+  return {
+    rows: tin.values.map((tinC, index) => ({
+      tinC,
+      toutC: tout.values[index]
+    })),
+    error: ''
+  }
+}
+
+async function calculateBatch() {
+  errorMessage.value = ''
+  batchResults.value = []
+
+  const { rows, error } = buildBatchRows()
+  if (error) {
+    errorMessage.value = error
+    return
+  }
+
+  isLoading.value = true
+  try {
+    const response = await calculateHeatDissipation(buildCommonPayload(rows))
+    batchResults.value = response.data?.results || []
+  } catch (requestError) {
+    errorMessage.value = getRequestErrorMessage(requestError)
   } finally {
     isLoading.value = false
   }
@@ -427,10 +603,9 @@ onMounted(() => {
 }
 
 .field input,
-.field select {
+.field select,
+.field textarea {
   width: 100%;
-  height: 44px;
-  padding: 0 0.8rem;
   border: 1px solid rgba(213, 220, 244, 0.95);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.82);
@@ -438,8 +613,23 @@ onMounted(() => {
   font-size: 0.95rem;
 }
 
+.field input,
+.field select {
+  height: 44px;
+  padding: 0 0.8rem;
+}
+
+.field textarea {
+  min-height: 170px;
+  resize: vertical;
+  padding: 0.75rem 0.8rem;
+  line-height: 1.45;
+  font-family: 'Nunito', sans-serif;
+}
+
 .field input:focus,
-.field select:focus {
+.field select:focus,
+.field textarea:focus {
   outline: none;
   border-color: rgba(115, 131, 255, 0.72);
   box-shadow: 0 0 0 4px rgba(120, 136, 255, 0.12);
@@ -516,6 +706,19 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.8rem;
+}
+
+.batch-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.row-count {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #6f7f99;
+  font-size: 0.9rem;
 }
 
 .submit-button {
@@ -605,6 +808,60 @@ onMounted(() => {
   word-break: break-word;
 }
 
+.batch-result {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.batch-summary {
+  margin: 0;
+  color: #6f7f99;
+  font-size: 0.9rem;
+}
+
+.result-table-wrap {
+  max-height: 360px;
+  overflow: auto;
+  border: 1px solid rgba(222, 228, 255, 0.95);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.result-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 360px;
+  font-size: 0.86rem;
+}
+
+.result-table th,
+.result-table td {
+  padding: 0.62rem 0.7rem;
+  border-bottom: 1px solid rgba(226, 232, 248, 0.86);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.result-table th:first-child,
+.result-table td:first-child {
+  text-align: left;
+}
+
+.result-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f4f7ff;
+  color: #657390;
+  font-family: 'VT323', monospace;
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+}
+
+.result-table tr:last-child td {
+  border-bottom: 0;
+}
+
 @media (max-width: 1080px) {
   .workspace-shell {
     grid-template-columns: 1fr;
@@ -621,10 +878,13 @@ onMounted(() => {
     flex-direction: column;
   }
 
-  .mode-strip,
-  .temperature-grid {
-    grid-template-columns: 1fr;
+  .mode-strip {
     flex-wrap: wrap;
+  }
+
+  .temperature-grid,
+  .batch-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
