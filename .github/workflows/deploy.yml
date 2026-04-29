@@ -177,7 +177,13 @@ jobs:
     runs-on: ubuntu-latest
     # 只要本次 workflow 没有失败或取消，就始终执行部署
     if: |
-      !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+      always() &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled') &&
+      (
+        github.event_name == 'push' ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy')
+      )
 
     steps:
       - name: Checkout code
