@@ -162,9 +162,16 @@
           </div>
 
           <div v-else class="batch-result">
-            <p class="batch-summary">
-              {{ batchResults.length ? `${batchResults.length} 行结果` : '等待批量计算' }}
-            </p>
+            <div class="batch-actions">
+              <p class="batch-summary">
+                {{ batchResults.length ? `${batchResults.length} 行结果` : '等待批量计算' }}
+              </p>
+              <div class="action-buttons">
+                <button type="button" :disabled="!batchResults.length" @click="copyQColumn">复制 Q 列</button>
+                <button type="button" :disabled="!batchResults.length" @click="exportCsv">导出 CSV</button>
+              </div>
+            </div>
+            <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
             <div v-if="batchResults.length" class="result-table-wrap">
               <table class="result-table">
                 <thead>
@@ -207,6 +214,7 @@ const fluidSuggestions = ref([])
 const showFluidSuggestions = ref(false)
 const isLoading = ref(false)
 const errorMessage = ref('')
+const successMessage = ref('')
 const singleResult = ref(null)
 const batchResults = ref([])
 const mode = ref('single')
@@ -265,6 +273,7 @@ function getRequestErrorMessage(error) {
 function setMode(nextMode) {
   mode.value = nextMode
   errorMessage.value = ''
+  successMessage.value = ''
 }
 
 function parseNumberList(text) {
@@ -303,6 +312,7 @@ function selectFluid(name) {
   fluidQuery.value = name
   showFluidSuggestions.value = false
   errorMessage.value = ''
+  successMessage.value = ''
   window.clearTimeout(fluidSearchTimer)
   window.setTimeout(() => {
     isSelectingFluid = false
@@ -369,6 +379,7 @@ async function calculateCurrent() {
 
 async function calculateSingle() {
   errorMessage.value = ''
+  successMessage.value = ''
   singleResult.value = null
 
   const validationError = validateSingleInput()
@@ -430,6 +441,7 @@ function buildBatchRows() {
 
 async function calculateBatch() {
   errorMessage.value = ''
+  successMessage.value = ''
   batchResults.value = []
 
   const { rows, error } = buildBatchRows()
@@ -447,6 +459,57 @@ async function calculateBatch() {
   } finally {
     isLoading.value = false
   }
+}
+
+async function copyQColumn() {
+  errorMessage.value = ''
+  successMessage.value = ''
+  if (!batchResults.value.length) {
+    return
+  }
+
+  const text = batchResults.value.map(row => String(row.qW)).join('\n')
+  try {
+    await navigator.clipboard.writeText(text)
+    successMessage.value = '已复制 Q 列'
+  } catch (error) {
+    errorMessage.value = '复制失败，请检查浏览器剪贴板权限'
+  }
+}
+
+function escapeCsvCell(value) {
+  const text = String(value ?? '')
+  if (/[",\r\n]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`
+  }
+  return text
+}
+
+function exportCsv() {
+  errorMessage.value = ''
+  successMessage.value = ''
+  if (!batchResults.value.length) {
+    return
+  }
+
+  const header = ['index', 'Tin_C', 'Tout_C', 'Q_W']
+  const lines = batchResults.value.map(row => [
+    row.index,
+    row.tinC,
+    row.toutC,
+    row.qW
+  ].map(escapeCsvCell).join(','))
+  const csv = [header.join(','), ...lines].join('\r\n')
+  const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `heat-dissipation-results-${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+  successMessage.value = 'CSV 已导出'
 }
 
 watch(fluidQuery, value => {
@@ -749,6 +812,16 @@ onMounted(() => {
   color: #ba345c;
 }
 
+.success-message {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(226, 255, 241, 0.9);
+  border: 1px solid rgba(174, 235, 207, 0.9);
+  color: #24845f;
+  font-size: 0.88rem;
+}
+
 .result-value {
   display: grid;
   gap: 0.35rem;
@@ -813,10 +886,41 @@ onMounted(() => {
   gap: 0.75rem;
 }
 
+.batch-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
 .batch-summary {
   margin: 0;
   color: #6f7f99;
   font-size: 0.9rem;
+}
+
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: flex-end;
+}
+
+.action-buttons button {
+  min-height: 34px;
+  padding: 0 0.7rem;
+  border-radius: 8px;
+  border: 1px solid rgba(213, 220, 244, 0.95);
+  background: rgba(255, 255, 255, 0.82);
+  color: #5060dc;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.action-buttons button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
 }
 
 .result-table-wrap {
@@ -885,6 +989,15 @@ onMounted(() => {
   .temperature-grid,
   .batch-grid {
     grid-template-columns: 1fr;
+  }
+
+  .batch-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .action-buttons {
+    justify-content: flex-start;
   }
 }
 </style>
