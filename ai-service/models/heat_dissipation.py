@@ -48,7 +48,7 @@ class HeatDissipationRequest(BaseModel):
     fluid: str = Field(min_length=1, max_length=100)
     pressure: UnitValue
     flowRate: UnitValue
-    rows: list[TemperatureRowInput] = Field(min_length=1, max_length=500)
+    rows: list[TemperatureRowInput]
 
 
 class HeatDissipationResultRow(BaseModel):

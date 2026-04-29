@@ -220,6 +220,7 @@ const batchResults = ref([])
 const mode = ref('single')
 const batchTinText = ref('25.1\n25.2\n25.3')
 const batchToutText = ref('30.1\n30.2\n30.3')
+const maxBatchRows = 500
 
 const form = reactive({
   pressureValue: 101.325,
@@ -265,7 +266,7 @@ function getRequestErrorMessage(error) {
     return detail
   }
   if (detail?.message) {
-    return detail.rowIndex ? `第 ${detail.rowIndex} 行：${detail.message}` : detail.message
+    return detail.rowIndex ? `第 ${detail.rowIndex} 行${detail.message}` : detail.message
   }
   return error?.message || '换热量计算失败，请稍后重试'
 }
@@ -429,6 +430,12 @@ function buildBatchRows() {
       error: '入口温度和出口温度的数据数量不一致，请检查粘贴内容'
     }
   }
+  if (tin.values.length > maxBatchRows) {
+    return {
+      rows: [],
+      error: `单次最多支持 ${maxBatchRows} 组温度数据`
+    }
+  }
 
   return {
     rows: tin.values.map((tinC, index) => ({
@@ -524,6 +531,13 @@ watch(fluidQuery, value => {
   fluidSearchTimer = window.setTimeout(() => {
     loadFluidSuggestions(value)
   }, 180)
+})
+
+watch([batchTinText, batchToutText], () => {
+  if (mode.value === 'batch') {
+    batchResults.value = []
+    successMessage.value = ''
+  }
 })
 
 onMounted(() => {

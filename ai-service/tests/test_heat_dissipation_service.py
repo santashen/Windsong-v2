@@ -63,6 +63,44 @@ class HeatDissipationServiceTest(unittest.TestCase):
 
         self.service.validate_request(payload)
 
+    def test_validate_request_rejects_invalid_fluid(self):
+        payload = HeatDissipationRequest(
+            fluid="NotAFluid",
+            pressure=UnitValue(value=101.325, unit="kPa"),
+            flowRate=UnitValue(value=0.1, unit="kg/s"),
+            rows=[TemperatureRowInput(tinC=25, toutC=35)],
+        )
+
+        with self.assertRaises(HeatDissipationError) as error:
+            self.service.validate_request(payload)
+        self.assertEqual(error.exception.code, "INVALID_FLUID")
+        self.assertEqual(error.exception.message, "请选择 CoolProp 支持的有效工质")
+
+    def test_validate_request_rejects_empty_rows(self):
+        payload = HeatDissipationRequest(
+            fluid="Water",
+            pressure=UnitValue(value=101.325, unit="kPa"),
+            flowRate=UnitValue(value=0.1, unit="kg/s"),
+            rows=[],
+        )
+
+        with self.assertRaises(HeatDissipationError) as error:
+            self.service.validate_request(payload)
+        self.assertEqual(error.exception.code, "INVALID_ROWS")
+        self.assertEqual(error.exception.message, "请至少输入一组温度数据")
+
+    def test_validate_request_rejects_too_many_rows(self):
+        payload = HeatDissipationRequest(
+            fluid="Water",
+            pressure=UnitValue(value=101.325, unit="kPa"),
+            flowRate=UnitValue(value=0.1, unit="kg/s"),
+            rows=[TemperatureRowInput(tinC=25, toutC=35) for _ in range(501)],
+        )
+
+        with self.assertRaises(HeatDissipationError) as error:
+            self.service.validate_request(payload)
+        self.assertEqual(error.exception.code, "INVALID_ROWS")
+
     def test_calculate_water_single_row_with_mass_flow(self):
         payload = HeatDissipationRequest(
             fluid="Water",

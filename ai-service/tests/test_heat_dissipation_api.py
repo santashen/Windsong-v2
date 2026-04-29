@@ -57,6 +57,66 @@ class HeatDissipationApiTest(unittest.TestCase):
         self.assertEqual(response.json()["detail"]["code"], "INVALID_FLOW_RATE")
         self.assertEqual(response.json()["detail"]["message"], "流量不能为负数")
 
+    def test_invalid_fluid_returns_business_error(self):
+        response = self.client.post(
+            "/api/heat-dissipation/calculate",
+            json={
+                "fluid": "NotAFluid",
+                "pressure": {"value": 101.325, "unit": "kPa"},
+                "flowRate": {"value": 0.1, "unit": "kg/s"},
+                "rows": [{"tinC": 25, "toutC": 35}],
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["detail"]["code"], "INVALID_FLUID")
+        self.assertEqual(response.json()["detail"]["message"], "请选择 CoolProp 支持的有效工质")
+
+    def test_empty_rows_returns_business_error(self):
+        response = self.client.post(
+            "/api/heat-dissipation/calculate",
+            json={
+                "fluid": "Water",
+                "pressure": {"value": 101.325, "unit": "kPa"},
+                "flowRate": {"value": 0.1, "unit": "kg/s"},
+                "rows": [],
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["detail"]["code"], "INVALID_ROWS")
+        self.assertEqual(response.json()["detail"]["message"], "请至少输入一组温度数据")
+
+    def test_too_many_rows_returns_business_error(self):
+        response = self.client.post(
+            "/api/heat-dissipation/calculate",
+            json={
+                "fluid": "Water",
+                "pressure": {"value": 101.325, "unit": "kPa"},
+                "flowRate": {"value": 0.1, "unit": "kg/s"},
+                "rows": [{"tinC": 25, "toutC": 35} for _ in range(501)],
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["detail"]["code"], "INVALID_ROWS")
+
+    def test_property_range_error_returns_business_error_with_row_index(self):
+        response = self.client.post(
+            "/api/heat-dissipation/calculate",
+            json={
+                "fluid": "Water",
+                "pressure": {"value": 101.325, "unit": "kPa"},
+                "flowRate": {"value": 0.1, "unit": "kg/s"},
+                "rows": [{"tinC": -300, "toutC": -290}],
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["detail"]["code"], "PROPERTY_RANGE_ERROR")
+        self.assertEqual(response.json()["detail"]["message"], "抱歉，当前温度或压力超出了该工质的物性库数据范围")
+        self.assertEqual(response.json()["detail"]["rowIndex"], 1)
+
     def test_calculate_batch_rows(self):
         response = self.client.post(
             "/api/heat-dissipation/calculate",
