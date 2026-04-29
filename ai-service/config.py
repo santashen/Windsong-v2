@@ -18,6 +18,7 @@ class Settings:
     DB_HOST: str = os.getenv("DB_HOST", "localhost")
     DB_PORT: int = int(os.getenv("DB_PORT", "5432"))
     ADMIN_API_KEY: str = os.getenv("ADMIN_API_KEY", "")
+    PORTFOLIO_ACCESS_PASSWORD: str = os.getenv("PORTFOLIO_ACCESS_PASSWORD", "")
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",
         f"host={DB_HOST} user={DB_USER} password={DB_PASSWORD} dbname={DB_NAME} port={DB_PORT} sslmode=disable",

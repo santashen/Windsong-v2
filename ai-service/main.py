@@ -5,10 +5,17 @@ import structlog
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from auth import verify_admin_api_key
+from auth import verify_admin_api_key, verify_family_portfolio_access, verify_family_portfolio_password
 from config import settings
 from logging_config import configure_logging
-from models import AssetBase, HoldingBase, InvestmentThesisBase, PerformanceHistoryBase, PortfolioBase
+from models import (
+    AssetBase,
+    HoldingBase,
+    InvestmentThesisBase,
+    PerformanceHistoryBase,
+    PortfolioAccessRequest,
+    PortfolioBase,
+)
 from models.heat_dissipation import HeatDissipationRequest
 from services.base_llm import OpenAICompatibleService
 from services.family_portfolio import FamilyPortfolioService
@@ -116,12 +123,17 @@ async def calculate_heat_dissipation(payload: HeatDissipationRequest):
 
 
 @app.get("/api/family-portfolio/portfolios")
-async def list_family_portfolios():
+async def list_family_portfolios(_: None = Depends(verify_family_portfolio_access)):
     try:
         return family_portfolio_service.list_portfolios()
     except Exception as exc:
         logger.exception("list family portfolios failed")
         raise HTTPException(status_code=500, detail=f"读取投资组合失败: {str(exc)}") from exc
+
+
+@app.post("/api/family-portfolio/access/verify")
+async def verify_family_portfolio_access_password(payload: PortfolioAccessRequest):
+    return verify_family_portfolio_password(payload.password)
 
 
 @app.post("/api/family-portfolio/portfolios")
@@ -168,7 +180,7 @@ async def delete_family_portfolio(portfolio_id: int, _: None = Depends(verify_ad
 
 
 @app.get("/api/family-portfolio/assets")
-async def list_family_assets():
+async def list_family_assets(_: None = Depends(verify_family_portfolio_access)):
     try:
         return family_portfolio_service.list_assets()
     except Exception as exc:
@@ -369,7 +381,9 @@ async def delete_family_performance_history(
 
 
 @app.get("/api/family-portfolio/portfolios/{portfolio_id}")
-async def get_family_portfolio_aggregate(portfolio_id: int):
+async def get_family_portfolio_aggregate(
+    portfolio_id: int, _: None = Depends(verify_family_portfolio_access)
+):
     try:
         aggregate = family_portfolio_service.get_portfolio_detail(portfolio_id)
         if aggregate is None:

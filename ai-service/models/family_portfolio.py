@@ -16,6 +16,10 @@ class AssetType(str, Enum):
     OTHER = "other"
 
 
+class PortfolioAccessRequest(BaseModel):
+    password: str = Field(default="", max_length=200)
+
+
 class PortfolioBase(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     total_principal: Decimal = Field(default=Decimal("0"), ge=Decimal("0"))

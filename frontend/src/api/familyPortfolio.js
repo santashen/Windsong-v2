@@ -18,24 +18,36 @@ function getAuthHeaders() {
     : {}
 }
 
+function getPortfolioAccessHeaders() {
+  const accessToken = sessionStorage.getItem('familyPortfolioAccessToken')
+  return accessToken
+    ? {
+        'X-Portfolio-Access-Token': accessToken
+      }
+    : {}
+}
+
 export const portfolioApi = {
+  verifyAccess(password) {
+    return familyPortfolioApi.post('/access/verify', { password })
+  },
   listPortfolios() {
-    return familyPortfolioApi.get('/portfolios')
+    return familyPortfolioApi.get('/portfolios', { headers: getPortfolioAccessHeaders() })
   },
   getPortfolioDetail(portfolioId) {
-    return familyPortfolioApi.get(`/portfolios/${portfolioId}`)
+    return familyPortfolioApi.get(`/portfolios/${portfolioId}`, { headers: getPortfolioAccessHeaders() })
   },
   listAssets() {
-    return familyPortfolioApi.get('/assets')
+    return familyPortfolioApi.get('/assets', { headers: getPortfolioAccessHeaders() })
   }
 }
 
 export const adminPortfolioApi = {
   listPortfolios() {
-    return familyPortfolioApi.get('/portfolios')
+    return familyPortfolioApi.get('/portfolios', { headers: getAuthHeaders() })
   },
   getPortfolioDetail(id) {
-    return familyPortfolioApi.get(`/portfolios/${id}`)
+    return familyPortfolioApi.get(`/portfolios/${id}`, { headers: getAuthHeaders() })
   },
   createPortfolio(data) {
     return familyPortfolioApi.post('/portfolios', data, { headers: getAuthHeaders() })
@@ -47,7 +59,7 @@ export const adminPortfolioApi = {
     return familyPortfolioApi.delete(`/portfolios/${id}`, { headers: getAuthHeaders() })
   },
   listAssets() {
-    return familyPortfolioApi.get('/assets')
+    return familyPortfolioApi.get('/assets', { headers: getAuthHeaders() })
   },
   createAsset(data) {
     return familyPortfolioApi.post('/assets', data, { headers: getAuthHeaders() })

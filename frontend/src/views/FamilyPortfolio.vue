@@ -7,7 +7,12 @@
 
 
 
-        <section v-if="error" class="empty-shell">
+        <section v-if="!accessGranted" class="empty-shell access-locked-shell">
+          <h2>家庭投资组合已锁定</h2>
+          <p>请输入访问密码后查看组合净值、持仓和投资逻辑。</p>
+        </section>
+
+        <section v-else-if="error" class="empty-shell">
           <h2>数据读取失败</h2>
           <p>{{ error }}</p>
         </section>
@@ -157,6 +162,30 @@
     </main>
 
     <transition name="fade">
+      <div v-if="!accessGranted" class="detail-overlay access-overlay">
+        <form class="access-modal" @submit.prevent="submitAccessPassword">
+          <p class="detail-kicker">Private Portfolio</p>
+          <h2>输入访问密码</h2>
+          <p>验证通过后才会加载家庭投资组合数据。</p>
+          <label class="access-field">
+            <span>访问密码</span>
+            <input
+              v-model="accessPassword"
+              type="password"
+              autocomplete="current-password"
+              placeholder="请输入密码"
+              :disabled="verifyingAccess"
+            />
+          </label>
+          <p v-if="accessError" class="access-error">{{ accessError }}</p>
+          <button type="submit" class="access-submit" :disabled="verifyingAccess || !accessPassword">
+            {{ verifyingAccess ? '验证中...' : '进入组合' }}
+          </button>
+        </form>
+      </div>
+    </transition>
+
+    <transition name="fade">
       <div v-if="activeThesis" class="detail-overlay" @click.self="activeThesis = null">
         <article class="detail-modal">
           <div class="detail-head">
@@ -212,6 +241,10 @@ import Header from '@/components/layout/Header.vue'
 
 const loading = ref(true)
 const error = ref('')
+const accessGranted = ref(false)
+const accessPassword = ref('')
+const accessError = ref('')
+const verifyingAccess = ref(false)
 const portfolioOptions = ref([])
 const selectedPortfolioId = ref(null)
 const portfolioDetail = ref(null)
@@ -331,6 +364,39 @@ function openThesis(item) {
   activeThesis.value = item
 }
 
+function revokePortfolioAccess(message = '访问已过期，请重新输入密码。') {
+  sessionStorage.removeItem('familyPortfolioAccessToken')
+  accessGranted.value = false
+  accessPassword.value = ''
+  accessError.value = message
+  loading.value = false
+  portfolioOptions.value = []
+  selectedPortfolioId.value = null
+  portfolioDetail.value = null
+  chartInstance?.clear()
+}
+
+async function submitAccessPassword() {
+  accessError.value = ''
+  verifyingAccess.value = true
+  try {
+    const response = await portfolioApi.verifyAccess(accessPassword.value)
+    const token = response.data?.access_token
+    if (token) {
+      sessionStorage.setItem('familyPortfolioAccessToken', token)
+    } else {
+      sessionStorage.removeItem('familyPortfolioAccessToken')
+    }
+    accessGranted.value = true
+    accessPassword.value = ''
+    await loadPage()
+  } catch (requestError) {
+    accessError.value = requestError?.response?.data?.detail || '密码不正确，请重新输入。'
+  } finally {
+    verifyingAccess.value = false
+  }
+}
+
 async function fetchPortfolios() {
   const response = await portfolioApi.listPortfolios()
   portfolioOptions.value = [...(response.data?.items || [])].sort((a, b) => b.id - a.id)
@@ -410,11 +476,20 @@ function renderChart() {
 }
 
 async function loadPage() {
+  if (!accessGranted.value) {
+    loading.value = false
+    return
+  }
+
   loading.value = true
   error.value = ''
   try {
     await fetchPortfolios()
   } catch (requestError) {
+    if (requestError?.response?.status === 401) {
+      revokePortfolioAccess(requestError?.response?.data?.detail || '访问已过期，请重新输入密码。')
+      return
+    }
     error.value = requestError?.response?.data?.detail || requestError?.message || '请求失败'
   } finally {
     loading.value = false
@@ -422,18 +497,27 @@ async function loadPage() {
 }
 
 watch(selectedPortfolioId, async value => {
-  if (!value) {
+  if (!value || !accessGranted.value) {
     return
   }
   try {
     await fetchPortfolioDetail(value)
   } catch (requestError) {
+    if (requestError?.response?.status === 401) {
+      revokePortfolioAccess(requestError?.response?.data?.detail || '访问已过期，请重新输入密码。')
+      return
+    }
     error.value = requestError?.response?.data?.detail || requestError?.message || '请求失败'
   }
 })
 
 onMounted(() => {
-  loadPage()
+  accessGranted.value = Boolean(sessionStorage.getItem('familyPortfolioAccessToken'))
+  if (accessGranted.value) {
+    loadPage()
+  } else {
+    loading.value = false
+  }
   resizeHandler = () => chartInstance?.resize()
   window.addEventListener('resize', resizeHandler)
 })
@@ -545,6 +629,7 @@ onBeforeUnmount(() => {
 .thesis-card,
 .chart-shell,
 .detail-modal,
+.access-modal,
 .report-footer-band {
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -812,6 +897,11 @@ onBeforeUnmount(() => {
   font-family: 'Manrope', sans-serif;
 }
 
+.access-locked-shell {
+  min-height: 360px;
+  color: #64748b;
+}
+
 .detail-overlay {
   position: fixed;
   inset: 0;
@@ -820,6 +910,77 @@ onBeforeUnmount(() => {
   display: grid;
   place-items: center;
   padding: 1.5rem;
+}
+
+.access-overlay {
+  z-index: 30;
+  background:
+    radial-gradient(circle at 50% 15%, rgba(219, 234, 254, 0.28), transparent 34%),
+    rgba(15, 23, 42, 0.48);
+}
+
+.access-modal {
+  width: min(420px, 100%);
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+
+.access-modal h2 {
+  margin: 0.25rem 0 0.5rem;
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.65rem;
+  color: #0f172a;
+}
+
+.access-modal p {
+  color: #64748b;
+}
+
+.access-field {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 1.25rem;
+  color: #334155;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.access-field input {
+  min-height: 44px;
+  padding: 0 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #0f172a;
+  font: inherit;
+}
+
+.access-field input:focus {
+  outline: 2px solid rgba(15, 23, 42, 0.16);
+  border-color: #0f172a;
+}
+
+.access-error {
+  margin-top: 0.75rem;
+  color: #dc2626 !important;
+  font-size: 0.875rem;
+}
+
+.access-submit {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 1rem;
+  border: 1px solid #0f172a;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.access-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
 .detail-modal {

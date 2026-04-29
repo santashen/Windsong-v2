@@ -4,8 +4,26 @@ Base path: `/api/family-portfolio`
 
 ## Endpoints
 
+### `POST /access/verify`
+- Purpose: verify the public portfolio access password and return a short-lived read token.
+- Request:
+```json
+{
+  "password": "your-password"
+}
+```
+- Response:
+```json
+{
+  "access_token": "expires.signature",
+  "expires_at": "2026-04-29T15:00:00+00:00",
+  "access_required": true
+}
+```
+
 ### `GET /portfolios`
 - Purpose: list all portfolios.
+- Auth: `X-Portfolio-Access-Token` or admin `X-API-Key`.
 - Service: `FamilyPortfolioService.list_portfolios`
 - Response:
 ```json
@@ -45,10 +63,12 @@ Base path: `/api/family-portfolio`
 
 ### `GET /portfolios/{portfolio_id}`
 - Purpose: return one portfolio with holdings, latest thesis per asset, and performance history.
+- Auth: `X-Portfolio-Access-Token` or admin `X-API-Key`.
 - Service: `FamilyPortfolioService.get_portfolio_detail`
 
 ### `GET /assets`
 - Purpose: list all assets.
+- Auth: `X-Portfolio-Access-Token` or admin `X-API-Key`.
 - Service: `FamilyPortfolioService.list_assets`
 
 ### `POST /assets`
@@ -135,6 +155,7 @@ Base path: `/api/family-portfolio`
 - Monetary and ratio fields are stored as PostgreSQL `NUMERIC`, so API responses keep decimal values as strings.
 - `portfolios.total_principal` and `holdings.weight_percentage` are derived fields. Do not treat client-submitted values as authoritative.
 - Portfolio detail currently returns the latest thesis per asset, ordered by `updated_at DESC, id DESC`.
+- Public read operations require `PORTFOLIO_ACCESS_PASSWORD` when it is configured. Clients first call `POST /access/verify`, then pass `X-Portfolio-Access-Token` to `GET /portfolios`, `GET /portfolios/{portfolio_id}`, and `GET /assets`.
 - All write operations (`POST`, `PUT`, `DELETE`) require admin auth through `X-API-Key: <ADMIN_API_KEY>` or `Authorization: Bearer <ADMIN_API_KEY>`.
 - If `ADMIN_API_KEY` is empty, write auth is skipped to match the existing backend development behavior.
 - Nightly market sync runs by default at `23:00` in `Asia/Shanghai`, configurable via `FAMILY_PORTFOLIO_SYNC_ENABLED`, `FAMILY_PORTFOLIO_SYNC_HOUR`, `FAMILY_PORTFOLIO_SYNC_MINUTE`, `FAMILY_PORTFOLIO_SYNC_TIMEZONE`, and `FAMILY_PORTFOLIO_BENCHMARK_SYMBOL`.
