@@ -75,9 +75,7 @@ class HeatDissipationService:
         return tuple(sorted(cleaned_fluids, key=str.lower))
 
     def calculate(self, payload: HeatDissipationRequest) -> HeatDissipationResponse:
-        self.validate_request(payload)
-
-        fluid = self.normalize_fluid(payload.fluid)
+        fluid = self.validate_request(payload)
         pressure_pa = self.convert_pressure_to_pa(payload.pressure)
         results = []
 
@@ -106,11 +104,11 @@ class HeatDissipationService:
 
         return HeatDissipationResponse(results=results)
 
-    def validate_request(self, payload: HeatDissipationRequest) -> None:
+    def validate_request(self, payload: HeatDissipationRequest) -> str:
         fluid = payload.fluid.strip()
         if not fluid:
             raise HeatDissipationError("INVALID_FLUID", "请选择 CoolProp 支持的有效工质")
-        self.normalize_fluid(fluid)
+        canonical_fluid = self.normalize_fluid(fluid)
         if payload.pressure.value <= 0:
             raise HeatDissipationError("INVALID_PRESSURE", "压力必须大于 0")
         if payload.flowRate.value < 0:
@@ -122,10 +120,10 @@ class HeatDissipationService:
         self.convert_pressure_to_pa(payload.pressure)
         if payload.flowRate.unit == FlowRateUnit.KG_PER_S.value:
             self.convert_flow_rate_to_kg_per_s(payload.flowRate)
-            return
+            return canonical_fluid
         if payload.flowRate.unit in VOLUME_FLOW_TO_M3_PER_S:
             self.convert_volume_flow_to_m3_per_s(payload.flowRate)
-            return
+            return canonical_fluid
         raise HeatDissipationError("INVALID_FLOW_RATE", "流量单位无效")
 
     def normalize_fluid(self, fluid: str) -> str:

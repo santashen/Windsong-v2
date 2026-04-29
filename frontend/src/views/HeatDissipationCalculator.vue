@@ -266,7 +266,7 @@ function getRequestErrorMessage(error) {
     return detail
   }
   if (detail?.message) {
-    return detail.rowIndex ? `第 ${detail.rowIndex} 行${detail.message}` : detail.message
+    return detail.rowIndex ? `第 ${detail.rowIndex} 行：${detail.message}` : detail.message
   }
   return error?.message || '换热量计算失败，请稍后重试'
 }
