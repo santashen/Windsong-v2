@@ -1,0 +1,197 @@
+import unittest
+
+from CoolProp.CoolProp import PropsSI
+
+from models.heat_dissipation import HeatDissipationRequest, TemperatureRowInput, UnitValue
+from services.heat_dissipation import HeatDissipationError, HeatDissipationService
+
+
+class HeatDissipationServiceTest(unittest.TestCase):
+    def setUp(self):
+        self.service = HeatDissipationService()
+
+    def test_convert_pressure_units_to_pa(self):
+        cases = [
+            (1, "Pa", 1),
+            (101.325, "kPa", 101325),
+            (0.101325, "MPa", 101325),
+            (1.01325, "bar", 101325),
+        ]
+
+        for value, unit, expected in cases:
+            with self.subTest(unit=unit):
+                pressure = UnitValue(value=value, unit=unit)
+                self.assertAlmostEqual(self.service.convert_pressure_to_pa(pressure), expected)
+
+    def test_convert_temperature_c_to_k(self):
+        self.assertAlmostEqual(self.service.convert_temperature_c_to_k(25), 298.15)
+
+    def test_convert_flow_units_to_kg_per_s(self):
+        self.assertAlmostEqual(
+            self.service.convert_flow_rate_to_kg_per_s(UnitValue(value=0.1, unit="kg/s")),
+            0.1,
+        )
+        self.assertAlmostEqual(
+            self.service.convert_flow_rate_to_kg_per_s(UnitValue(value=60, unit="L/min"), 1000),
+            1.0,
+        )
+        self.assertAlmostEqual(
+            self.service.convert_flow_rate_to_kg_per_s(UnitValue(value=3.6, unit="m3/h"), 1000),
+            1.0,
+        )
+        self.assertAlmostEqual(
+            self.service.convert_flow_rate_to_kg_per_s(UnitValue(value=3.6, unit="m³/h"), 1000),
+            1.0,
+        )
+
+    def test_rejects_invalid_pressure_and_flow(self):
+        with self.assertRaises(HeatDissipationError) as pressure_error:
+            self.service.convert_pressure_to_pa(UnitValue(value=0, unit="kPa"))
+        self.assertEqual(pressure_error.exception.code, "INVALID_PRESSURE")
+
+        with self.assertRaises(HeatDissipationError) as flow_error:
+            self.service.convert_flow_rate_to_kg_per_s(UnitValue(value=-1, unit="kg/s"))
+        self.assertEqual(flow_error.exception.code, "INVALID_FLOW_RATE")
+
+    def test_validate_request_accepts_minimum_valid_payload(self):
+        payload = HeatDissipationRequest(
+            fluid="Water",
+            pressure=UnitValue(value=101.325, unit="kPa"),
+            flowRate=UnitValue(value=0.1, unit="kg/s"),
+            rows=[TemperatureRowInput(tinC=25, toutC=35)],
+        )
+
+        self.service.validate_request(payload)
+
+    def test_validate_request_rejects_invalid_fluid(self):
+        payload = HeatDissipationRequest(
+            fluid="NotAFluid",
+            pressure=UnitValue(value=101.325, unit="kPa"),
+            flowRate=UnitValue(value=0.1, unit="kg/s"),
+            rows=[TemperatureRowInput(tinC=25, toutC=35)],
+        )
+
+        with self.assertRaises(HeatDissipationError) as error:
+            self.service.validate_request(payload)
+        self.assertEqual(error.exception.code, "INVALID_FLUID")
+        self.assertEqual(error.exception.message, "请选择 CoolProp 支持的有效工质")
+
+    def test_validate_request_rejects_empty_rows(self):
+        payload = HeatDissipationRequest(
+            fluid="Water",
+            pressure=UnitValue(value=101.325, unit="kPa"),
+            flowRate=UnitValue(value=0.1, unit="kg/s"),
+            rows=[],
+        )
+
+        with self.assertRaises(HeatDissipationError) as error:
+            self.service.validate_request(payload)
+        self.assertEqual(error.exception.code, "INVALID_ROWS")
+        self.assertEqual(error.exception.message, "请至少输入一组温度数据")
+
+    def test_validate_request_rejects_too_many_rows(self):
+        payload = HeatDissipationRequest(
+            fluid="Water",
+            pressure=UnitValue(value=101.325, unit="kPa"),
+            flowRate=UnitValue(value=0.1, unit="kg/s"),
+            rows=[TemperatureRowInput(tinC=25, toutC=35) for _ in range(501)],
+        )
+
+        with self.assertRaises(HeatDissipationError) as error:
+            self.service.validate_request(payload)
+        self.assertEqual(error.exception.code, "INVALID_ROWS")
+
+    def test_calculate_water_single_row_with_mass_flow(self):
+        payload = HeatDissipationRequest(
+            fluid="Water",
+            pressure=UnitValue(value=101.325, unit="kPa"),
+            flowRate=UnitValue(value=0.1, unit="kg/s"),
+            rows=[TemperatureRowInput(tinC=25, toutC=35)],
+        )
+
+        response = self.service.calculate(payload)
+        result = response.results[0]
+        expected_q_w = 0.1 * (
+            PropsSI("H", "T", 308.15, "P", 101325, "Water")
+            - PropsSI("H", "T", 298.15, "P", 101325, "Water")
+        )
+
+        self.assertEqual(response.unit, "W")
+        self.assertEqual(result.index, 1)
+        self.assertAlmostEqual(result.qW, expected_q_w)
+
+    def test_calculate_water_batch_rows_with_mass_flow(self):
+        payload = HeatDissipationRequest(
+            fluid="Water",
+            pressure=UnitValue(value=101.325, unit="kPa"),
+            flowRate=UnitValue(value=0.1, unit="kg/s"),
+            rows=[
+                TemperatureRowInput(tinC=25, toutC=35),
+                TemperatureRowInput(tinC=26, toutC=36),
+                TemperatureRowInput(tinC=27, toutC=37),
+            ],
+        )
+
+        response = self.service.calculate(payload)
+
+        self.assertEqual(len(response.results), 3)
+        self.assertEqual([row.index for row in response.results], [1, 2, 3])
+        self.assertTrue(all(row.qW > 0 for row in response.results))
+
+    def test_calculate_tin_equals_tout_returns_zero(self):
+        payload = HeatDissipationRequest(
+            fluid="Water",
+            pressure=UnitValue(value=101.325, unit="kPa"),
+            flowRate=UnitValue(value=0.1, unit="kg/s"),
+            rows=[TemperatureRowInput(tinC=25, toutC=25)],
+        )
+
+        response = self.service.calculate(payload)
+
+        self.assertAlmostEqual(response.results[0].qW, 0)
+
+    def test_calculate_volume_flow_uses_inlet_density(self):
+        payload = HeatDissipationRequest(
+            fluid="Water",
+            pressure=UnitValue(value=101.325, unit="kPa"),
+            flowRate=UnitValue(value=60, unit="L/min"),
+            rows=[TemperatureRowInput(tinC=25, toutC=35)],
+        )
+
+        response = self.service.calculate(payload)
+        rho = PropsSI("D", "T", 298.15, "P", 101325, "Water")
+        expected_mass_flow = rho * (60 / 1000 / 60)
+        expected_q_w = expected_mass_flow * (
+            PropsSI("H", "T", 308.15, "P", 101325, "Water")
+            - PropsSI("H", "T", 298.15, "P", 101325, "Water")
+        )
+
+        self.assertAlmostEqual(response.results[0].qW, expected_q_w)
+
+    def test_calculate_symbol_volume_flow_unit(self):
+        payload = HeatDissipationRequest(
+            fluid="Water",
+            pressure=UnitValue(value=101.325, unit="kPa"),
+            flowRate=UnitValue(value=3.6, unit="m³/h"),
+            rows=[TemperatureRowInput(tinC=25, toutC=35)],
+        )
+
+        response = self.service.calculate(payload)
+
+        self.assertGreater(response.results[0].qW, 0)
+
+    def test_search_fluids_by_query(self):
+        response = self.service.search_fluids("water")
+
+        self.assertIn("Water", [item.name for item in response.items])
+
+    def test_search_fluids_empty_query_returns_common_fluids_first(self):
+        response = self.service.search_fluids(limit=5)
+
+        self.assertGreater(len(response.items), 0)
+        self.assertLessEqual(len(response.items), 5)
+        self.assertEqual(response.items[0].name, "Water")
+
+
+if __name__ == "__main__":
+    unittest.main()

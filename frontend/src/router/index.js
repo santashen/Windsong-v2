@@ -7,6 +7,7 @@ import BlogPost from '@/views/BlogPost.vue'
 import Services from '@/views/Services.vue'
 import ValuationBacktest from '@/views/ValuationBacktest.vue'
 import FamilyPortfolio from '@/views/FamilyPortfolio.vue'
+import HeatDissipationCalculator from '@/views/HeatDissipationCalculator.vue'
 
 // Admin views (lazy loaded)
 const AdminLayout = () => import('@/views/admin/AdminLayout.vue')
@@ -54,6 +55,11 @@ const routes = [
     path: '/services/family-portfolio',
     name: 'FamilyPortfolio',
     component: FamilyPortfolio
+  },
+  {
+    path: '/services/heat-dissipation-calculator',
+    name: 'HeatDissipationCalculator',
+    component: HeatDissipationCalculator
   },
   // Admin routes
   {

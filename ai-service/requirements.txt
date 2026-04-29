@@ -7,4 +7,4 @@ structlog>=24.1.0
 akshare_proxy_patch
 pydantic>=2.6.0
 psycopg[binary]>=3.2.0
-akshare_proxy_patch
+CoolProp>=6.6.0

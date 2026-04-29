@@ -9,10 +9,12 @@ from auth import verify_admin_api_key
 from config import settings
 from logging_config import configure_logging
 from models import AssetBase, HoldingBase, InvestmentThesisBase, PerformanceHistoryBase, PortfolioBase
+from models.heat_dissipation import HeatDissipationRequest
 from services.base_llm import OpenAICompatibleService
 from services.family_portfolio import FamilyPortfolioService
 from services.family_portfolio_market_sync import FamilyPortfolioMarketSyncService
 from services.family_portfolio_scheduler import FamilyPortfolioScheduler
+from services.heat_dissipation import HeatDissipationError, HeatDissipationService
 from services.valuation_backtest import ValuationBacktestService
 
 configure_logging()
@@ -67,6 +69,7 @@ valuation_service = ValuationBacktestService()
 family_portfolio_service = FamilyPortfolioService()
 family_portfolio_market_sync_service = FamilyPortfolioMarketSyncService()
 family_portfolio_scheduler = FamilyPortfolioScheduler(sync_service=family_portfolio_market_sync_service)
+heat_dissipation_service = HeatDissipationService()
 
 
 @app.on_event("startup")
@@ -82,6 +85,34 @@ async def shutdown_family_portfolio_scheduler():
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "ai-service"}
+
+
+@app.get("/api/heat-dissipation/fluids")
+async def search_heat_dissipation_fluids(query: str | None = None, limit: int = 20):
+    return heat_dissipation_service.search_fluids(query=query, limit=limit).model_dump()
+
+
+@app.post("/api/heat-dissipation/calculate")
+async def calculate_heat_dissipation(payload: HeatDissipationRequest):
+    try:
+        return heat_dissipation_service.calculate(payload).model_dump()
+    except HeatDissipationError as exc:
+        detail = {"code": exc.code, "message": exc.message}
+        if exc.row_index is not None:
+            detail["rowIndex"] = exc.row_index
+        raise HTTPException(status_code=400, detail=detail) from exc
+    except Exception as exc:
+        logger.exception(
+            "heat dissipation calculation failed",
+            fluid=payload.fluid,
+            pressure_unit=payload.pressure.unit,
+            flow_unit=payload.flowRate.unit,
+            row_count=len(payload.rows),
+        )
+        raise HTTPException(
+            status_code=500,
+            detail={"code": "INTERNAL_ERROR", "message": "换热量计算失败，请稍后重试"},
+        ) from exc
 
 
 @app.get("/api/family-portfolio/portfolios")
