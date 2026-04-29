@@ -260,6 +260,7 @@ async def sync_family_portfolio_market(_: None = Depends(verify_admin_api_key)):
         return family_portfolio_market_sync_service.sync_all_portfolios_with_logging(
             run_type="manual",
             triggered_by="admin_api",
+            write_performance_history=False,
         )
     except Exception as exc:
         logger.exception("sync family portfolio market failed")

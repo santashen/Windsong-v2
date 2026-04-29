@@ -77,6 +77,10 @@ Base path: `/api/family-portfolio`
 ### `POST /holdings`
 - Purpose: create or upsert one holding by `(portfolio_id, asset_id)`.
 - Service: `FamilyPortfolioService.create_holding`
+- Notes:
+  - `average_cost` is calculated from `invested_amount / share_count`.
+  - `weight_percentage` is recalculated from all holdings in the portfolio.
+  - The parent portfolio `total_principal` is recalculated from all holding `invested_amount` values.
 
 ### `PUT /holdings/{holding_id}`
 - Purpose: update one holding by id.
@@ -91,8 +95,8 @@ Base path: `/api/family-portfolio`
 - Service: `FamilyPortfolioMarketSyncService.sync_all_portfolios`
 - Notes:
   - updates `assets.current_price`
-  - recomputes latest `portfolio_nav`
-  - recalculates and upserts `benchmark_nav` using沪深300
+  - recomputes latest portfolio market value and return summary
+  - does not insert `performance_history`; nightly scheduled sync writes the daily NAV history after market data is expected to be settled
 
 ### `GET /sync/logs`
 - Purpose: list recent market sync logs.
@@ -129,6 +133,7 @@ Base path: `/api/family-portfolio`
 
 - `asset_type` must be one of `stock`, `etf`, `fund`, `bond`, `cash`, `other`.
 - Monetary and ratio fields are stored as PostgreSQL `NUMERIC`, so API responses keep decimal values as strings.
+- `portfolios.total_principal` and `holdings.weight_percentage` are derived fields. Do not treat client-submitted values as authoritative.
 - Portfolio detail currently returns the latest thesis per asset, ordered by `updated_at DESC, id DESC`.
 - All write operations (`POST`, `PUT`, `DELETE`) require admin auth through `X-API-Key: <ADMIN_API_KEY>` or `Authorization: Bearer <ADMIN_API_KEY>`.
 - If `ADMIN_API_KEY` is empty, write auth is skipped to match the existing backend development behavior.

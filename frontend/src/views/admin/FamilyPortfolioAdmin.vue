@@ -26,8 +26,11 @@
           </div>
           <form class="form-grid" @submit.prevent="submitPortfolio">
             <label><span>组合名称</span><input v-model.trim="portfolioForm.name" type="text" required /></label>
-            <label><span>累计本金</span><input v-model="portfolioForm.total_principal" type="number" step="0.0001" min="0" required /></label>
             <label><span>币种</span><input v-model.trim="portfolioForm.currency" type="text" maxlength="10" required /></label>
+            <label>
+              <span>累计本金（自动汇总）</span>
+              <input :value="portfolioForm.total_principal" type="number" step="0.0001" min="0" readonly />
+            </label>
             <button class="submit-btn" type="submit">{{ editingPortfolioId ? '更新组合' : '新增组合' }}</button>
           </form>
           <div class="list-shell">
@@ -106,7 +109,10 @@
                   <span>平均成本（自动计算）</span>
                   <input :value="holdingAverageCostDisplay" type="number" step="0.0001" min="0" readonly />
                 </label>
-                <label><span>权重 (%)</span><input v-model="holdingForm.weight_percentage" type="number" step="0.0001" min="0" max="100" required /></label>
+                <label>
+                  <span>权重（自动计算）</span>
+                  <input :value="holdingWeightDisplay" type="number" step="0.0001" min="0" max="100" readonly />
+                </label>
                 <button class="submit-btn" type="submit">{{ editingHoldingId ? '更新持仓' : '新增持仓' }}</button>
               </form>
 
@@ -262,6 +268,7 @@ const holdingsWithThesis = computed(() =>
 )
 
 const holdingAverageCostDisplay = computed(() => calculateAverageCost(holdingForm.value.invested_amount, holdingForm.value.share_count))
+const holdingWeightDisplay = computed(() => calculateHoldingWeight(holdingForm.value.invested_amount))
 
 function getHoldingAssetId(item) {
   const rawAssetId = item?.holding?.asset_id ?? item?.asset?.id ?? null
@@ -337,6 +344,21 @@ function calculateAverageCost(investedAmount, shareCount) {
     return '0.0000'
   }
   return (invested / shares).toFixed(4)
+}
+
+function calculateHoldingWeight(investedAmount) {
+  const currentInvested = Number(investedAmount || 0)
+  const existingTotal = (selectedPortfolioDetail.value?.holdings || []).reduce((sum, item) => {
+    if (editingHoldingId.value && item.holding.id === editingHoldingId.value) {
+      return sum
+    }
+    return sum + Number(item.holding.invested_amount || 0)
+  }, 0)
+  const nextTotal = existingTotal + currentInvested
+  if (nextTotal <= 0) {
+    return '0.0000'
+  }
+  return ((currentInvested / nextTotal) * 100).toFixed(4)
 }
 
 function resetPortfolioForm() {
@@ -529,7 +551,7 @@ async function submitHolding() {
     asset_id: Number(holdingForm.value.asset_id),
     invested_amount: holdingForm.value.invested_amount,
     share_count: holdingForm.value.share_count,
-    weight_percentage: holdingForm.value.weight_percentage
+    weight_percentage: holdingWeightDisplay.value
   }
   if (editingHoldingId.value) {
     await adminPortfolioApi.updateHolding(editingHoldingId.value, payload)
@@ -538,6 +560,10 @@ async function submitHolding() {
   }
   resetHoldingForm()
   await loadPortfolioDetail(selectedPortfolioId.value)
+  const currentPortfolio = portfolios.value.find(item => item.id === selectedPortfolioId.value)
+  if (currentPortfolio && selectedPortfolioDetail.value?.portfolio) {
+    currentPortfolio.total_principal = selectedPortfolioDetail.value.portfolio.total_principal
+  }
 }
 
 async function submitThesis() {
@@ -650,6 +676,10 @@ async function deleteAsset(id) {
 async function deleteHolding(id) {
   await adminPortfolioApi.deleteHolding(id)
   await loadPortfolioDetail(selectedPortfolioId.value)
+  const currentPortfolio = portfolios.value.find(item => item.id === selectedPortfolioId.value)
+  if (currentPortfolio && selectedPortfolioDetail.value?.portfolio) {
+    currentPortfolio.total_principal = selectedPortfolioDetail.value.portfolio.total_principal
+  }
 }
 
 async function deleteThesis(id) {

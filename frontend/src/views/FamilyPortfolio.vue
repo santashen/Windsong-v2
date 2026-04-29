@@ -34,6 +34,13 @@
                 <p class="summary-label">累计投入本金</p>
                 <strong class="summary-muted">{{ formatCurrency(portfolioPrincipal) }}</strong>
               </div>
+
+              <div class="summary-split">
+                <p class="summary-label">盈利情况</p>
+                <strong :class="['summary-profit', totalReturnValue >= 0 ? 'up' : 'down']">
+                  {{ totalReturnValue >= 0 ? '+' : '' }}{{ formatCurrency(totalReturnValue) }}
+                </strong>
+              </div>
             </article>
           </section>
 
@@ -551,7 +558,7 @@ onBeforeUnmount(() => {
 .summary-panel {
   display: flex;
   gap: 3rem;
-  max-width: 640px;
+  max-width: 920px;
   padding: 1.5rem;
   border-radius: 8px;
 }
@@ -564,7 +571,8 @@ onBeforeUnmount(() => {
 }
 
 .summary-row strong,
-.summary-muted {
+.summary-muted,
+.summary-profit {
   font-family: 'Manrope', sans-serif;
   font-size: clamp(1.35rem, 2vw, 1.8rem);
   line-height: 1.05;

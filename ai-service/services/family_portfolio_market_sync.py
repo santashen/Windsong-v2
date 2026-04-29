@@ -37,16 +37,26 @@ class FamilyPortfolioMarketSyncService:
         self.akshare_service = akshare_service or AkshareDataService()
 
     def sync_all_portfolios(self) -> dict:
-        return self.sync_all_portfolios_with_logging(run_type="scheduled", triggered_by="scheduler")
+        return self.sync_all_portfolios_with_logging(
+            run_type="scheduled",
+            triggered_by="scheduler",
+            write_performance_history=True,
+        )
 
-    def sync_all_portfolios_with_logging(self, *, run_type: str, triggered_by: str | None) -> dict:
+    def sync_all_portfolios_with_logging(
+        self,
+        *,
+        run_type: str,
+        triggered_by: str | None,
+        write_performance_history: bool,
+    ) -> dict:
         sync_log = self.repository.create_market_sync_log(
             run_type=run_type,
             status="running",
             triggered_by=triggered_by,
         )
         try:
-            result = self._sync_all_portfolios_internal()
+            result = self._sync_all_portfolios_internal(write_performance_history=write_performance_history)
             asset_updates = result["asset_updates"]
             portfolio_updates = result["portfolio_updates"]
             completed_log = self.repository.update_market_sync_log(
@@ -78,14 +88,18 @@ class FamilyPortfolioMarketSyncService:
         logs = self.repository.list_market_sync_logs(limit=limit)
         return {"items": [item.model_dump(mode="json") for item in logs]}
 
-    def _sync_all_portfolios_internal(self) -> dict:
+    def _sync_all_portfolios_internal(self, *, write_performance_history: bool) -> dict:
         assets = self.repository.list_assets()
         asset_results = [self._sync_asset_price(asset) for asset in assets]
         portfolios = self.repository.list_portfolios()
         portfolio_results = []
         for portfolio in portfolios:
             try:
-                sync_result = self.sync_portfolio_snapshot(portfolio.id, asset_results)
+                sync_result = self.sync_portfolio_snapshot(
+                    portfolio.id,
+                    asset_results,
+                    write_performance_history=write_performance_history,
+                )
                 portfolio_results.append(sync_result)
             except Exception as exc:
                 logger.exception("family portfolio snapshot sync failed", portfolio_id=portfolio.id)
@@ -107,6 +121,8 @@ class FamilyPortfolioMarketSyncService:
         self,
         portfolio_id: int,
         asset_results: list[AssetSyncResult] | None = None,
+        *,
+        write_performance_history: bool,
     ) -> dict:
         aggregate = self.repository.get_portfolio_aggregate(portfolio_id)
         if aggregate is None:
@@ -128,20 +144,22 @@ class FamilyPortfolioMarketSyncService:
         principal = aggregate.portfolio.total_principal
         portfolio_nav = self._quantize(total_market_value / principal) if principal > 0 else Decimal("0")
 
-        history_records = self.repository.list_performance_history(portfolio_id)
-        benchmark_nav_map = self._build_benchmark_nav_map(history_records, snapshot_date)
-        benchmark_nav = benchmark_nav_map[snapshot_date]
+        benchmark_nav = None
+        if write_performance_history:
+            history_records = self.repository.list_performance_history(portfolio_id)
+            benchmark_nav_map = self._build_benchmark_nav_map(history_records, snapshot_date)
+            benchmark_nav = benchmark_nav_map[snapshot_date]
 
-        performance_record = self.repository.create_performance_history(
-            PerformanceHistoryBase(
-                portfolio_id=portfolio_id,
-                record_date=snapshot_date,
-                portfolio_nav=portfolio_nav,
-                benchmark_nav=benchmark_nav,
+            performance_record = self.repository.create_performance_history(
+                PerformanceHistoryBase(
+                    portfolio_id=portfolio_id,
+                    record_date=snapshot_date,
+                    portfolio_nav=portfolio_nav,
+                    benchmark_nav=benchmark_nav,
+                )
             )
-        )
 
-        self._refresh_existing_benchmark_history(history_records, benchmark_nav_map)
+            self._refresh_existing_benchmark_history(history_records, benchmark_nav_map)
 
         total_return_value = total_market_value - principal
         total_return_rate = (
@@ -153,8 +171,9 @@ class FamilyPortfolioMarketSyncService:
             "portfolio_name": aggregate.portfolio.name,
             "success": True,
             "record_date": snapshot_date.isoformat(),
-            "portfolio_nav": str(performance_record.portfolio_nav),
-            "benchmark_nav": str(performance_record.benchmark_nav),
+            "history_written": write_performance_history,
+            "portfolio_nav": str(portfolio_nav),
+            "benchmark_nav": str(benchmark_nav) if benchmark_nav is not None else None,
             "total_market_value": str(self._quantize(total_market_value)),
             "total_return_value": str(self._quantize(total_return_value)),
             "total_return_rate": str(total_return_rate),

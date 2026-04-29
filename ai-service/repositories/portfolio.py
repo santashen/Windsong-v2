@@ -138,7 +138,7 @@ class FamilyPortfolioRepository:
     def create_portfolio(self, portfolio: PortfolioBase) -> PortfolioRecord:
         query = """
             INSERT INTO portfolios (name, total_principal, currency)
-            VALUES (%(name)s, %(total_principal)s, %(currency)s)
+            VALUES (%(name)s, 0, %(currency)s)
             RETURNING id, name, total_principal, currency, created_at, updated_at
         """
         with get_db_connection() as connection, connection.cursor() as cursor:
@@ -173,7 +173,6 @@ class FamilyPortfolioRepository:
             UPDATE portfolios
             SET
                 name = %(name)s,
-                total_principal = %(total_principal)s,
                 currency = %(currency)s
             WHERE id = %(portfolio_id)s
             RETURNING id, name, total_principal, currency, created_at, updated_at
@@ -315,14 +314,20 @@ class FamilyPortfolioRepository:
                     ELSE 0
                 END,
                 weight_percentage = EXCLUDED.weight_percentage
-            RETURNING id, portfolio_id, asset_id, invested_amount, share_count, average_cost, weight_percentage, created_at, updated_at
+            RETURNING id, portfolio_id
         """
         with get_db_connection() as connection, connection.cursor() as cursor:
             cursor.execute(query, holding.model_dump())
             row = cursor.fetchone()
-        return HoldingRecord.model_validate(row)
+            self._recalculate_portfolio_allocations(cursor, row["portfolio_id"])
+            return self._get_holding_by_id(cursor, row["id"])
 
     def update_holding(self, holding_id: int, holding: HoldingBase) -> HoldingRecord | None:
+        lookup_query = """
+            SELECT portfolio_id
+            FROM holdings
+            WHERE id = %(holding_id)s
+        """
         query = """
             UPDATE holdings
             SET
@@ -337,23 +342,77 @@ class FamilyPortfolioRepository:
                 END,
                 weight_percentage = %(weight_percentage)s
             WHERE id = %(holding_id)s
-            RETURNING id, portfolio_id, asset_id, invested_amount, share_count, average_cost, weight_percentage, created_at, updated_at
+            RETURNING id, portfolio_id
         """
         payload = {"holding_id": holding_id, **holding.model_dump()}
         with get_db_connection() as connection, connection.cursor() as cursor:
+            cursor.execute(lookup_query, {"holding_id": holding_id})
+            old_row = cursor.fetchone()
             cursor.execute(query, payload)
             row = cursor.fetchone()
-        return HoldingRecord.model_validate(row) if row else None
+            if not row:
+                return None
+            if old_row and old_row["portfolio_id"] != row["portfolio_id"]:
+                self._recalculate_portfolio_allocations(cursor, old_row["portfolio_id"])
+            self._recalculate_portfolio_allocations(cursor, row["portfolio_id"])
+            return self._get_holding_by_id(cursor, row["id"])
 
     def delete_holding(self, holding_id: int) -> bool:
+        lookup_query = """
+            SELECT portfolio_id
+            FROM holdings
+            WHERE id = %(holding_id)s
+        """
         query = """
             DELETE FROM holdings
             WHERE id = %(holding_id)s
         """
         with get_db_connection() as connection, connection.cursor() as cursor:
+            cursor.execute(lookup_query, {"holding_id": holding_id})
+            holding_row = cursor.fetchone()
             cursor.execute(query, {"holding_id": holding_id})
             deleted = cursor.rowcount > 0
+            if deleted and holding_row:
+                self._recalculate_portfolio_allocations(cursor, holding_row["portfolio_id"])
         return deleted
+
+    def _recalculate_portfolio_allocations(self, cursor, portfolio_id: int) -> None:
+        query = """
+            WITH total AS (
+                SELECT COALESCE(SUM(invested_amount), 0) AS total_principal
+                FROM holdings
+                WHERE portfolio_id = %(portfolio_id)s
+            )
+            UPDATE holdings h
+            SET weight_percentage = CASE
+                WHEN total.total_principal > 0
+                THEN ROUND((h.invested_amount / total.total_principal * 100)::numeric, 4)
+                ELSE 0
+            END
+            FROM total
+            WHERE h.portfolio_id = %(portfolio_id)s
+        """
+        portfolio_query = """
+            UPDATE portfolios
+            SET total_principal = (
+                SELECT COALESCE(SUM(invested_amount), 0)
+                FROM holdings
+                WHERE portfolio_id = %(portfolio_id)s
+            )
+            WHERE id = %(portfolio_id)s
+        """
+        cursor.execute(query, {"portfolio_id": portfolio_id})
+        cursor.execute(portfolio_query, {"portfolio_id": portfolio_id})
+
+    def _get_holding_by_id(self, cursor, holding_id: int) -> HoldingRecord:
+        query = """
+            SELECT id, portfolio_id, asset_id, invested_amount, share_count, average_cost, weight_percentage, created_at, updated_at
+            FROM holdings
+            WHERE id = %(holding_id)s
+        """
+        cursor.execute(query, {"holding_id": holding_id})
+        row = cursor.fetchone()
+        return HoldingRecord.model_validate(row)
 
     def create_investment_thesis(self, thesis: InvestmentThesisBase) -> InvestmentThesisRecord:
         query = """
