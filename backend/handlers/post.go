@@ -91,6 +91,25 @@ func (h *PostHandler) GetPosts(c *gin.Context) {
 	Success(c, response)
 }
 
+// GetTags godoc
+// @Summary      List blog post tags
+// @Description  Returns all unique tags from published blog posts
+// @Tags         posts
+// @Produce      json
+// @Success      200  {object}  Response{data=[]string}
+// @Failure      500  {object}  Response
+// @Router       /posts/tags [get]
+func (h *PostHandler) GetTags(c *gin.Context) {
+	tags, err := h.postService.GetAllTags()
+	if err != nil {
+		middleware.GetLogger(c).Error().Err(err).Msg("failed to fetch post tags")
+		Error(c, http.StatusInternalServerError, CodeInternalError, "Failed to fetch post tags")
+		return
+	}
+
+	Success(c, tags)
+}
+
 // GetPost godoc
 // @Summary      Get a blog post
 // @Description  Returns a single blog post by its slug

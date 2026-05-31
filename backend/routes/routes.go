@@ -79,6 +79,7 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 
 		// Post routes - Public (read-only)
 		v1.GET("/posts", postHandler.GetPosts)
+		v1.GET("/posts/tags", postHandler.GetTags)
 		v1.GET("/posts/:slug", postHandler.GetPost)
 
 		// Webhook routes - Protected (require API key)

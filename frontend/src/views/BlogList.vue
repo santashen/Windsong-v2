@@ -72,6 +72,7 @@ const router = useRouter()
 
 onMounted(() => {
   store.fetchPosts()
+  store.fetchTags()
 })
 
 function goToPost(post) {

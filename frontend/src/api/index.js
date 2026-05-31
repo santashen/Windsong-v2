@@ -58,6 +58,11 @@ export const postsApi = {
     return api.get('/posts', { params })
   },
 
+  // Get all available post tags
+  getTags() {
+    return api.get('/posts/tags')
+  },
+
   // Get single post by slug
   getPost(slug) {
     return api.get(`/posts/${slug}`)

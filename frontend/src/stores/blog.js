@@ -15,6 +15,7 @@ export const useBlogStore = defineStore('blog', () => {
     totalPages: 0
   })
   const isLoading = ref(false)
+  const isLoadingTags = ref(false)
   const isLoadingPost = ref(false)
   const error = ref(null)
 
@@ -39,14 +40,24 @@ export const useBlogStore = defineStore('blog', () => {
       const response = await postsApi.getPosts(params)
       posts.value = response.data.posts || []
       pagination.value = response.data.pagination || pagination.value
-
-      // Collect all unique tags from posts
-      collectTags()
     } catch (err) {
       error.value = 'Failed to fetch posts'
       console.error('Error fetching posts:', err)
     } finally {
       isLoading.value = false
+    }
+  }
+
+  async function fetchTags() {
+    isLoadingTags.value = true
+
+    try {
+      const response = await postsApi.getTags()
+      allTags.value = response.data || []
+    } catch (err) {
+      console.error('Error fetching post tags:', err)
+    } finally {
+      isLoadingTags.value = false
     }
   }
 
@@ -64,18 +75,6 @@ export const useBlogStore = defineStore('blog', () => {
     } finally {
       isLoadingPost.value = false
     }
-  }
-
-  function collectTags() {
-    const tagSet = new Set()
-    posts.value.forEach(post => {
-      if (post.tags && Array.isArray(post.tags)) {
-        post.tags.forEach(tag => tagSet.add(tag))
-      }
-    })
-    // Merge with existing tags to keep accumulated tags
-    allTags.value.forEach(tag => tagSet.add(tag))
-    allTags.value = Array.from(tagSet).sort()
   }
 
   function setTagFilter(tag) {
@@ -109,12 +108,14 @@ export const useBlogStore = defineStore('blog', () => {
     allTags,
     pagination,
     isLoading,
+    isLoadingTags,
     isLoadingPost,
     error,
     // Getters
     hasActiveFilter,
     // Actions
     fetchPosts,
+    fetchTags,
     fetchPost,
     setTagFilter,
     clearFilter,

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -335,6 +336,35 @@ func (s *PostService) GetPosts(query PostQuery) (*models.PostListResponse, error
 			TotalPages: totalPages,
 		},
 	}, nil
+}
+
+// GetAllTags returns all unique tags from published posts.
+func (s *PostService) GetAllTags() ([]string, error) {
+	var posts []models.Post
+	if err := s.db.Model(&models.Post{}).
+		Select("tags").
+		Where("is_published = ?", true).
+		Find(&posts).Error; err != nil {
+		return nil, err
+	}
+
+	tagSet := make(map[string]struct{})
+	for _, post := range posts {
+		for _, tag := range post.Tags {
+			tag = strings.TrimSpace(tag)
+			if tag != "" {
+				tagSet[tag] = struct{}{}
+			}
+		}
+	}
+
+	tags := make([]string, 0, len(tagSet))
+	for tag := range tagSet {
+		tags = append(tags, tag)
+	}
+	sort.Strings(tags)
+
+	return tags, nil
 }
 
 // GetPostBySlug returns a single post by slug

@@ -9,6 +9,7 @@ import (
 type PostServiceInterface interface {
 	SyncPosts() (*services.SyncResult, error)
 	GetPosts(query services.PostQuery) (*models.PostListResponse, error)
+	GetAllTags() ([]string, error)
 	GetPostBySlug(slug string) (*models.Post, error)
 }
 
