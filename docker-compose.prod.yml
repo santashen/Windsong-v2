@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # PostgreSQL 数据库
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16.14-alpine3.22
     container_name: windsong-db
     restart: always
     environment:
