@@ -4,7 +4,7 @@
 
 ## 功能特性
 
-- 博客系统 - 基于 Git 仓库同步的 Markdown 文章，支持 LaTeX 公式渲染
+- 博客系统 - 基于 Git 仓库同步的 Markdown 文章，支持 LaTeX 公式渲染和 RSS 全文订阅
 - 相册管理 - 照片展览与后台管理
 - 黄金分析 - AI 驱动的黄金市场分析
 - 财经数据 - 股票/基金历史数据对比查看
@@ -57,6 +57,7 @@ Windsong-v2/
 - GORM - ORM 库
 - PostgreSQL 16 + Flyway 数据库迁移
 - frontmatter - Markdown 前置数据解析
+- Goldmark - RSS 正文 Markdown 渲染
 
 ### 前端
 - Vue 3 + Composition API (`<script setup>`)
@@ -114,6 +115,7 @@ python main.py        # http://localhost:8000
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | `/health` | 健康检查 |
+| GET | `/rss.xml` | RSS 2.0 全文订阅 |
 | POST | `/api/auth/verify` | 验证管理员 API Key |
 | GET | `/api/posts` | 获取文章列表 |
 | GET | `/api/posts/:slug` | 获取单篇文章 |
@@ -176,6 +178,18 @@ python main.py        # http://localhost:8000
 | `SERVER_USER` | SSH 用户名 | `root` |
 | `SERVER_SSH_KEY` | SSH 私钥 | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
 | `SERVER_PORT` | SSH 端口（可选） | `22` |
+
+RSS 元数据可在 GitHub 仓库的 Actions Variables 中配置；未配置时使用下列默认值：
+
+| Variable 名称 | 说明 | 默认值 |
+|---------------|------|--------|
+| `SITE_URL` | 站点公开根地址，不含末尾 `/` | `https://v2.windsong.top` |
+| `RSS_TITLE` | Feed 标题 | `Windsong Blog` |
+| `RSS_DESCRIPTION` | Feed 描述 | `Windsong Blog RSS Feed` |
+| `RSS_AUTHOR` | 作者邮箱，可留空 | 空 |
+| `RSS_MAX_ITEMS` | Feed 最大文章数，范围 1–100 | `20` |
+
+部署完成后可通过 `https://v2.windsong.top/rss.xml` 订阅。Feed 仅包含已发布文章，并支持 `ETag`、`Last-Modified` 和条件请求缓存。
 
 ### 手动部署
 

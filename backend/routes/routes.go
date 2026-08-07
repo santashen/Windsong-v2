@@ -61,6 +61,9 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 	// API v1 routes
 	v1 := r.Group("/api/v1")
 	{
+		// RSS API alias (the canonical public URL is /rss.xml)
+		v1.GET("/rss.xml", rssHandler.GetFeed)
+
 		// Existing hello endpoint
 		v1.GET("/hello", func(c *gin.Context) {
 			handlers.Success(c, gin.H{

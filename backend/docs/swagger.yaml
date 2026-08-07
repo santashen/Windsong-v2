@@ -527,6 +527,47 @@ paths:
       summary: Get a blog post
       tags:
       - posts
+  /posts/tags:
+    get:
+      description: Returns all unique tags from published blog posts
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/handlers.Response'
+            - properties:
+                data:
+                  items:
+                    type: string
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.Response'
+      summary: List blog post tags
+      tags:
+      - posts
+  /rss.xml:
+    get:
+      description: Returns the latest published posts as an RSS 2.0 document
+      produces:
+      - application/rss+xml
+      responses:
+        "200":
+          description: RSS 2.0 XML
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.Response'
+      summary: Get the blog RSS feed
+      tags:
+      - rss
   /webhooks/sync:
     post:
       description: Triggers a sync of blog posts from the configured git repository

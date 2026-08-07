@@ -52,6 +52,11 @@ services:
       PORTFOLIO_ACCESS_PASSWORD: ${PORTFOLIO_ACCESS_PASSWORD}
       POSTS_REPO_URL: ${POSTS_REPO_URL}
       POSTS_DIR: /root/data/posts
+      SITE_URL: ${SITE_URL:-https://v2.windsong.top}
+      RSS_TITLE: ${RSS_TITLE:-Windsong Blog}
+      RSS_DESCRIPTION: ${RSS_DESCRIPTION:-Windsong Blog RSS Feed}
+      RSS_AUTHOR: ${RSS_AUTHOR:-}
+      RSS_MAX_ITEMS: ${RSS_MAX_ITEMS:-20}
       AI_SERVICE_URL: http://ai-service:8000
     volumes:
       - posts_data:/root/data/posts

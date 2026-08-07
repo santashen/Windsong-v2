@@ -493,6 +493,47 @@
                 }
             }
         },
+        "/posts/tags": {
+            "get": {
+                "description": "Returns all unique tags from published blog posts",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "List blog post tags",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/handlers.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/posts/{slug}": {
             "get": {
                 "description": "Returns a single blog post by its slug",
@@ -539,6 +580,32 @@
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/rss.xml": {
+            "get": {
+                "description": "Returns the latest published posts as an RSS 2.0 document",
+                "produces": [
+                    "application/rss+xml"
+                ],
+                "tags": [
+                    "rss"
+                ],
+                "summary": "Get the blog RSS feed",
+                "responses": {
+                    "200": {
+                        "description": "RSS 2.0 XML",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/handlers.Response"
                         }
