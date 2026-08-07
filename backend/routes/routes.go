@@ -39,13 +39,24 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 	// Initialize services
 	photoService := services.NewPhotoService(database.GetDB())
 	postService := services.NewPostService(database.GetDB(), cfg.PostsRepoURL, cfg.PostsDir)
+	rssService := services.NewRSSService(database.GetDB(), services.RSSConfig{
+		SiteURL:     cfg.SiteURL,
+		Title:       cfg.RSSTitle,
+		Description: cfg.RSSDescription,
+		Author:      cfg.RSSAuthor,
+		MaxItems:    cfg.RSSMaxItems,
+	})
 
 	// Initialize handlers
 	photoHandler := handlers.NewPhotoHandler(photoService)
 	postHandler := handlers.NewPostHandler(postService)
+	rssHandler := handlers.NewRSSHandler(rssService)
 
 	// Initialize auth handler
 	authHandler := handlers.NewAuthHandler(cfg.AdminAPIKey)
+
+	// RSS feed (public, standard XML response)
+	r.GET("/rss.xml", rssHandler.GetFeed)
 
 	// API v1 routes
 	v1 := r.Group("/api/v1")

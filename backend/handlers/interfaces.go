@@ -13,6 +13,11 @@ type PostServiceInterface interface {
 	GetPostBySlug(slug string) (*models.Post, error)
 }
 
+// RSSServiceInterface defines the contract handlers need from RSSService.
+type RSSServiceInterface interface {
+	Generate() (*services.GeneratedFeed, error)
+}
+
 // PhotoServiceInterface defines the contract handlers need from PhotoService
 type PhotoServiceInterface interface {
 	GetPhotos(query services.PhotoQuery) (*models.PhotoResponse, error)
