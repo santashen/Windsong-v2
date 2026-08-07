@@ -14,6 +14,7 @@ require (
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.1
 	github.com/swaggo/swag v1.16.6
+	github.com/yuin/goldmark v1.7.8
 	gorm.io/driver/postgres v1.5.9
 	gorm.io/gorm v1.25.12
 )
