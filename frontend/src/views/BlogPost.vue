@@ -59,54 +59,19 @@
 <script setup>
 import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { marked } from 'marked'
-import katex from 'katex'
 import 'katex/dist/katex.min.css'
 import Header from '@/components/layout/Header.vue'
 import Footer from '@/components/layout/Footer.vue'
 import { useBlogStore } from '@/stores/blog'
+import { renderMarkdown } from '@/utils/renderMarkdown'
 
 const store = useBlogStore()
 const route = useRoute()
 const router = useRouter()
 
-// Configure marked
-marked.setOptions({
-  breaks: true,
-  gfm: true
-})
-
-// LaTeX rendering utilities
-function renderLatexInHtml(html) {
-  let result = html
-
-  // Render block-level formulas ($$...$$)
-  result = result.replace(/\$\$([^\$]+)\$\$/g, (match, latex) => {
-    try {
-      return katex.renderToString(latex, { displayMode: true })
-    } catch (e) {
-      console.error('KaTeX rendering error:', e)
-      return match
-    }
-  })
-
-  // Render inline formulas ($...$)
-  result = result.replace(/\$([^\$]+)\$/g, (match, latex) => {
-    try {
-      return katex.renderToString(latex, { displayMode: false })
-    } catch (e) {
-      console.error('KaTeX rendering error:', e)
-      return match
-    }
-  })
-
-  return result
-}
-
 const renderedContent = computed(() => {
   if (!store.currentPost?.content) return ''
-  const html = marked(store.currentPost.content)
-  return renderLatexInHtml(html)
+  return renderMarkdown(store.currentPost.content)
 })
 
 function formatDate(dateStr) {
