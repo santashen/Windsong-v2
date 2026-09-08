@@ -35,6 +35,9 @@ marked.use({
     {
       name: 'inlineLatex',
       level: 'inline',
+      start(src) {
+        return src.indexOf('$')
+      },
       tokenizer(src) {
         const match = /^\$(?!\$)((?:\\.|[^$\\\r\n])+?)\$(?!\$)/.exec(src)
 
