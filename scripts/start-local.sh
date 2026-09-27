@@ -34,14 +34,23 @@ fi
 
 cd "${ROOT_DIR}"
 
-# Make the root .env available to all local child processes, including Python.
-# The file is intended for local development and should contain shell-compatible
-# KEY=VALUE entries.
+# Load the root dotenv file for all local child processes, including Python.
+# Do not source it: dotenv values such as DATABASE_URL may contain spaces and
+# are valid dotenv values but not valid shell assignment syntax.
 if [[ -f "${ROOT_DIR}/.env" ]]; then
-  set -a
-  # shellcheck disable=SC1091
-  source "${ROOT_DIR}/.env"
-  set +a
+  while IFS= read -r env_line || [[ -n "${env_line}" ]]; do
+    [[ -z "${env_line}" || "${env_line}" =~ ^[[:space:]]*# ]] && continue
+    if [[ "${env_line}" =~ ^[[:space:]]*(export[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+      env_key="${BASH_REMATCH[2]}"
+      env_value="${BASH_REMATCH[3]}"
+      if [[ "${env_value}" == \"*\" && "${env_value}" == *\" ]]; then
+        env_value="${env_value:1:${#env_value}-2}"
+      elif [[ "${env_value}" == \'*\' && "${env_value}" == *\' ]]; then
+        env_value="${env_value:1:${#env_value}-2}"
+      fi
+      export "${env_key}=${env_value}"
+    fi
+  done < "${ROOT_DIR}/.env"
 fi
 
 echo "Starting PostgreSQL..."

@@ -32,6 +32,13 @@ export const adminPhotoApi = {
     })
   },
 
+  // Parse unstructured photo notes into editable drafts without creating photos
+  previewAIImport(content) {
+    return api.post('/photos/ai-import/preview', { content }, {
+      headers: getAuthHeaders()
+    })
+  },
+
   // Update photo
   updatePhoto(id, data) {
     return api.put(`/photos/${id}`, data, {
