@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -15,12 +16,35 @@ import (
 
 // PhotoHandler handles photo-related HTTP requests
 type PhotoHandler struct {
-	photoService PhotoServiceInterface
+	photoService         PhotoServiceInterface
+	photoMetadataService PhotoMetadataServiceInterface
 }
 
 // NewPhotoHandler creates a new PhotoHandler
-func NewPhotoHandler(photoService PhotoServiceInterface) *PhotoHandler {
-	return &PhotoHandler{photoService: photoService}
+func NewPhotoHandler(photoService PhotoServiceInterface, photoMetadataService PhotoMetadataServiceInterface) *PhotoHandler {
+	return &PhotoHandler{photoService: photoService, photoMetadataService: photoMetadataService}
+}
+
+// PreviewAIImport parses unstructured photo notes into editable photo drafts.
+// It deliberately does not write anything to the database.
+func (h *PhotoHandler) PreviewAIImport(c *gin.Context) {
+	var input services.PhotoMetadataImportRequest
+	if err := c.ShouldBindJSON(&input); err != nil {
+		ValidationError(c, err)
+		return
+	}
+	if strings.TrimSpace(input.Content) == "" {
+		Error(c, http.StatusBadRequest, CodeBadRequest, "Content cannot be empty")
+		return
+	}
+
+	result, err := h.photoMetadataService.ParsePhotoMetadata(c.Request.Context(), input)
+	if err != nil {
+		middleware.GetLogger(c).Error().Err(err).Msg("failed to parse photo metadata")
+		Error(c, http.StatusBadGateway, CodeExternalService, "Photo metadata parsing service is unavailable")
+		return
+	}
+	Success(c, result)
 }
 
 // GetPhotos godoc

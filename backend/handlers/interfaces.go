@@ -1,9 +1,15 @@
 package handlers
 
 import (
+	"context"
 	"windsong/models"
 	"windsong/services"
 )
+
+// PhotoMetadataServiceInterface defines the photo metadata capability used by handlers.
+type PhotoMetadataServiceInterface interface {
+	ParsePhotoMetadata(ctx context.Context, request services.PhotoMetadataImportRequest) (*services.PhotoMetadataImportResponse, error)
+}
 
 // PostServiceInterface defines the contract handlers need from PostService
 type PostServiceInterface interface {
