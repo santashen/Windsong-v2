@@ -4,9 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Windsong is a personal blog system with Go backend, Vue 3 frontend, and Python AI service, using PostgreSQL for data storage. Features include blog posts (git-synced markdown), photo gallery, gold analysis (AI-powered), finance data viewer, and real-time monitoring. The project supports Docker containerization and GitHub Actions CI/CD.
+Windsong is a personal blog system with Go backend and Vue 3 frontend, using PostgreSQL for data storage. Features include blog posts (git-synced markdown), photo gallery, and an API-key protected admin area. The project supports Docker containerization and GitHub Actions CI/CD.
 
 ## Development Commands
+
+### One-command local startup
+```bash
+./scripts/start-local.sh
+```
 
 ### Database
 ```bash
@@ -27,14 +32,6 @@ cd frontend
 npm install
 npm run dev           # Runs on http://localhost:5173
 npm run build         # Production build
-```
-
-### AI Service (Python)
-```bash
-cd ai-service
-pip install -r requirements.txt
-cp .env.example .env  # Configure LLM API keys
-python main.py        # Runs on http://localhost:8000
 ```
 
 ### Docker Production
@@ -135,22 +132,16 @@ handlers.ValidationError(c, err)
   - Pinia stores: Use Setup Store syntax (function with `ref`, `computed`, return object)
   - Avoid Options API unless necessary for compatibility
 - `@` alias resolves to `src/` directory
-- API requests: `/api/v1` proxied to backend:8080, `/ai-api` proxied to ai-service:8000 (in dev via Vite config)
-- Views: Home, Gallery, BlogList, BlogPost, About, Services, GoldAnalysis, Monitor, FinanceView, Admin (Login/Photos)
+- API requests: `/api/v1` proxied to backend:8080 (in dev via Vite config)
+- Views: Home, Gallery, BlogList, BlogPost, About, Admin (Login/Photos)
 - Components: `layout/` (Header/Footer), `blog/`, `gallery/`, `monitor/`, `admin/`, `icons/`
 - Stores: auth, blog, gallery, gold, monitor, finance
 - API layer: `api/index.js` wraps axios; `api/admin/photos.js` for admin; `api/auth.js` for auth
 - Markdown rendering with `marked`, LaTeX with `katex`, charts with `echarts`, 3D with `three.js`
 
-### AI Service (`ai-service/`)
-- Python 3.12 + FastAPI
-- OpenAI-compatible LLM integration (configurable provider)
-- Services: gold analysis (LLM-powered), finance data (stocks/funds via akshare)
-- Endpoints: `/api/gold/analyze`, `/api/finance/search`, `/api/finance/history`
-
 ### Database (`db/migrations/`)
 - PostgreSQL 16 with Flyway for schema migrations
-- Tables: posts, photos, gold_analyses
+- Tables: posts, photos
 - Migration files in `db/migrations/` following Flyway naming convention (V1__, V2__, etc.)
 
 ### Testing
@@ -195,7 +186,7 @@ npx playwright test     # E2E 测试
 ```
 
 ### Deployment
-- GitHub Actions builds Docker images for backend, frontend, and ai-service on push to main/develop
+- GitHub Actions builds Docker images for backend and frontend on push to main/develop
 - Images pushed to ghcr.io/santashen/
 - Auto-deploy to server on develop branch push (deploy path: `/data/web-dockers/Windsong-v2`)
 - Production uses Nginx reverse proxy: `/api/` -> backend:9080, `/` -> frontend:9081

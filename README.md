@@ -1,14 +1,11 @@
 # Windsong Blog
 
-一个基于 Go + Vue 3 + Python + PostgreSQL 的个人博客系统，支持 Docker 容器化部署和 GitHub Actions 自动化 CI/CD。
+一个基于 Go + Vue 3 + PostgreSQL 的个人博客系统，支持 Docker 容器化部署和 GitHub Actions 自动化 CI/CD。
 
 ## 功能特性
 
 - 博客系统 - 基于 Git 仓库同步的 Markdown 文章，支持 LaTeX 公式渲染和 RSS 全文订阅
 - 相册管理 - 照片展览与后台管理
-- 黄金分析 - AI 驱动的黄金市场分析
-- 财经数据 - 股票/基金历史数据对比查看
-- 实时监控 - 数据可视化监控面板
 - 管理后台 - API Key 认证的后台管理系统
 
 ## 项目结构
@@ -34,12 +31,6 @@ Windsong-v2/
 │   │   ├── components/   # 公共组件
 │   │   └── style/        # 样式文件
 │   ├── nginx.conf        # 容器内 Nginx 配置
-│   └── Dockerfile
-├── ai-service/           # Python AI 服务
-│   ├── main.py           # FastAPI 入口
-│   ├── config.py         # 配置管理
-│   ├── services/         # LLM / 财经数据服务
-│   ├── prompts/          # AI 提示词
 │   └── Dockerfile
 ├── db/migrations/        # Flyway 数据库迁移
 ├── nginx/                # 主 Nginx 反向代理配置
@@ -70,12 +61,15 @@ Windsong-v2/
 - ECharts - 图表可视化
 - Three.js - 3D 图形
 
-### AI 服务
-- Python 3.12 + FastAPI
-- OpenAI 兼容 LLM API
-- akshare - 财经数据获取
-
 ## 快速开始
+
+也可以使用一键启动脚本：
+
+```bash
+./scripts/start-local.sh
+```
+
+脚本会启动 PostgreSQL、执行 Flyway 迁移，并同时启动 Go 后端和 Vue 前端。按 `Ctrl+C` 只会停止前后端进程，数据库容器会继续运行。
 
 ### 1. 启动数据库
 
@@ -100,15 +94,6 @@ npm install
 npm run dev           # http://localhost:5173
 ```
 
-### 4. 启动 AI 服务（可选）
-
-```bash
-cd ai-service
-pip install -r requirements.txt
-cp .env.example .env  # 配置 LLM API 密钥
-python main.py        # http://localhost:8000
-```
-
 ## API 概览
 
 ### 后端 API (`/api`)
@@ -124,14 +109,6 @@ python main.py        # http://localhost:8000
 | GET | `/api/photos/:id` | 获取单张照片 |
 | GET | `/api/photos/filters` | 获取筛选选项 |
 | POST/PUT/DELETE | `/api/photos` | 照片管理 (管理员) |
-| GET | `/api/gold/today` | 获取今日黄金分析 |
-
-### AI 服务 API (`/ai-api` 代理)
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/gold/analyze` | AI 黄金分析 |
-| GET | `/api/finance/search` | 搜索股票/基金 |
-| GET | `/api/finance/history` | 获取历史数据 |
 
 ## 生产部署
 
@@ -149,12 +126,12 @@ python main.py        # http://localhost:8000
                         └──────┬───────┘
                                │
          ┌─────────────────────┼─────────────────────┐
-         │                     │                     │
- ┌───────▼───────┐    ┌───────▼───────┐    ┌────────▼────────┐
- │   Frontend    │    │    Backend    │    │   AI Service    │
- │   (Vue SPA)   │    │   (Go API)    │    │   (FastAPI)     │
- │    :9081      │    │    :9080      │    │    :8000        │
- └───────────────┘    └───────┬───────┘    └─────────────────┘
+         │                     │
+ ┌───────▼───────┐    ┌───────▼───────┐
+ │   Frontend    │    │    Backend    │
+ │   (Vue SPA)   │    │   (Go API)    │
+ │    :9081      │    │    :8080      │
+ └───────────────┘    └───────┬───────┘
                               │
                       ┌───────▼───────┐
                       │  PostgreSQL   │
@@ -166,7 +143,7 @@ python main.py        # http://localhost:8000
 ### 自动部署（GitHub Actions）
 
 推送到 `develop` 分支自动触发部署流程：
-1. 构建 backend、frontend、ai-service Docker 镜像
+1. 构建 backend、frontend Docker 镜像
 2. 推送镜像到 ghcr.io/santashen/
 3. SSH 到服务器拉取最新镜像并重启服务
 

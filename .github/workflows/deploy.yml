@@ -16,7 +16,6 @@ on:
           - deploy
           - build-backend
           - build-frontend
-          - build-ai-service
           - build-all
       deploy_ref:
         description: Branch to deploy when action is deploy
@@ -31,7 +30,6 @@ env:
   NAMESPACE: windsong
   BACKEND_IMAGE: backend
   FRONTEND_IMAGE: frontend
-  AI_SERVICE_IMAGE: ai-service
 
 jobs:
   # 检测哪些目录有变化
@@ -40,9 +38,8 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
-      ai-service: ${{ steps.filter.outputs.ai-service }}
       shared: ${{ steps.filter.outputs.shared }}
-      any-changed: ${{ steps.filter.outputs.backend == 'true' || steps.filter.outputs.frontend == 'true' || steps.filter.outputs.ai-service == 'true' || steps.filter.outputs.shared == 'true' }}
+      any-changed: ${{ steps.filter.outputs.backend == 'true' || steps.filter.outputs.frontend == 'true' || steps.filter.outputs.shared == 'true' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -59,9 +56,6 @@ jobs:
               - '.github/workflows/deploy.yml'
             frontend:
               - 'frontend/**'
-              - '.github/workflows/deploy.yml'
-            ai-service:
-              - 'ai-service/**'
               - '.github/workflows/deploy.yml'
             shared:
               - 'docker-compose*.yml'
@@ -137,43 +131,8 @@ jobs:
             type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.FRONTEND_IMAGE }}:buildcache,mode=max
             type=gha,scope=frontend,mode=max
 
-  # 构建 ai-service 镜像（仅当 ai-service 目录有变化时）
-  build-ai-service:
-    needs: changes
-    runs-on: ubuntu-latest
-    if: |
-      (github.event_name == 'push' && (needs.changes.outputs.ai-service == 'true' || needs.changes.outputs.shared == 'true')) ||
-      (github.event_name == 'workflow_dispatch' && (github.event.inputs.action == 'build-ai-service' || github.event.inputs.action == 'build-all'))
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Tencent Cloud Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.TENCENT_CLOUD_USERNAME }}
-          password: ${{ secrets.TENCENT_CLOUD_PASSWORD }}
-
-      - name: Build and push ai-service image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./ai-service
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.AI_SERVICE_IMAGE }}:latest
-          cache-from: |
-            type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.AI_SERVICE_IMAGE }}:buildcache
-            type=gha,scope=ai-service
-          cache-to: |
-            type=registry,ref=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.AI_SERVICE_IMAGE }}:buildcache,mode=max
-            type=gha,scope=ai-service,mode=max
-
   deploy:
-    needs: [changes, build-backend, build-frontend, build-ai-service]
+    needs: [changes, build-backend, build-frontend]
     runs-on: ubuntu-latest
     # 只要本次 workflow 没有失败或取消，就始终执行部署
     if: |
@@ -197,7 +156,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT || 22 }}
           script_stop: true
-          envs: DB_USER,DB_PASSWORD,DB_NAME,TENCENT_USER,TENCENT_PWD,ADMIN_API_KEY,PORTFOLIO_ACCESS_PASSWORD,POSTS_REPO_URL,SITE_URL,RSS_TITLE,RSS_DESCRIPTION,RSS_AUTHOR,RSS_MAX_ITEMS,LLM_API_URL,LLM_API_KEY,LLM_MODEL,AKSHARE_PROXY_HOST,AKSHARE_PROXY_TOKEN,AKSHARE_PROXY_RETRY,FAMILY_PORTFOLIO_SYNC_ENABLED,FAMILY_PORTFOLIO_SYNC_HOUR,FAMILY_PORTFOLIO_SYNC_MINUTE,FAMILY_PORTFOLIO_SYNC_TIMEZONE,FAMILY_PORTFOLIO_BENCHMARK_SYMBOL,REGISTRY,NAMESPACE,DEPLOY_REF
+          envs: DB_USER,DB_PASSWORD,DB_NAME,TENCENT_USER,TENCENT_PWD,ADMIN_API_KEY,POSTS_REPO_URL,SITE_URL,RSS_TITLE,RSS_DESCRIPTION,RSS_AUTHOR,RSS_MAX_ITEMS,REGISTRY,NAMESPACE,DEPLOY_REF
           script: |
             cd /data/web-dockers/Windsong-v2
 
@@ -209,24 +168,12 @@ jobs:
             echo "DB_PASSWORD=$DB_PASSWORD" >> .env
             echo "DB_NAME=$DB_NAME" >> .env
             echo "ADMIN_API_KEY=$ADMIN_API_KEY" >> .env
-            echo "PORTFOLIO_ACCESS_PASSWORD=$PORTFOLIO_ACCESS_PASSWORD" >> .env
             echo "POSTS_REPO_URL=$POSTS_REPO_URL" >> .env
             echo "SITE_URL=$SITE_URL" >> .env
             echo "RSS_TITLE=$RSS_TITLE" >> .env
             echo "RSS_DESCRIPTION=$RSS_DESCRIPTION" >> .env
             echo "RSS_AUTHOR=$RSS_AUTHOR" >> .env
             echo "RSS_MAX_ITEMS=$RSS_MAX_ITEMS" >> .env
-            echo "LLM_API_URL=$LLM_API_URL" >> .env
-            echo "LLM_API_KEY=$LLM_API_KEY" >> .env
-            echo "LLM_MODEL=$LLM_MODEL" >> .env
-            echo "AKSHARE_PROXY_HOST=$AKSHARE_PROXY_HOST" >> .env
-            echo "AKSHARE_PROXY_TOKEN=$AKSHARE_PROXY_TOKEN" >> .env
-            echo "AKSHARE_PROXY_RETRY=$AKSHARE_PROXY_RETRY" >> .env
-            echo "FAMILY_PORTFOLIO_SYNC_ENABLED=$FAMILY_PORTFOLIO_SYNC_ENABLED" >> .env
-            echo "FAMILY_PORTFOLIO_SYNC_HOUR=$FAMILY_PORTFOLIO_SYNC_HOUR" >> .env
-            echo "FAMILY_PORTFOLIO_SYNC_MINUTE=$FAMILY_PORTFOLIO_SYNC_MINUTE" >> .env
-            echo "FAMILY_PORTFOLIO_SYNC_TIMEZONE=$FAMILY_PORTFOLIO_SYNC_TIMEZONE" >> .env
-            echo "FAMILY_PORTFOLIO_BENCHMARK_SYMBOL=$FAMILY_PORTFOLIO_BENCHMARK_SYMBOL" >> .env
             chmod 600 .env
 
             # 登录腾讯云仓库
@@ -254,21 +201,9 @@ jobs:
           NAMESPACE: ${{ env.NAMESPACE }}
           DEPLOY_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_ref || github.ref_name }}
           ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
-          PORTFOLIO_ACCESS_PASSWORD: ${{ secrets.PORTFOLIO_ACCESS_PASSWORD }}
           POSTS_REPO_URL: ${{ secrets.POSTS_REPO_URL }}
           SITE_URL: ${{ vars.SITE_URL || 'https://v2.windsong.top' }}
           RSS_TITLE: ${{ vars.RSS_TITLE || 'Windsong Blog' }}
           RSS_DESCRIPTION: ${{ vars.RSS_DESCRIPTION || 'Windsong Blog RSS Feed' }}
           RSS_AUTHOR: ${{ vars.RSS_AUTHOR }}
           RSS_MAX_ITEMS: ${{ vars.RSS_MAX_ITEMS || '20' }}
-          LLM_API_URL: ${{ secrets.LLM_API_URL }}
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-          LLM_MODEL: ${{ secrets.LLM_MODEL }}
-          AKSHARE_PROXY_HOST: ${{ secrets.AKSHARE_PROXY_HOST }}
-          AKSHARE_PROXY_TOKEN: ${{ secrets.AKSHARE_PROXY_TOKEN }}
-          AKSHARE_PROXY_RETRY: ${{ secrets.AKSHARE_PROXY_RETRY }}
-          FAMILY_PORTFOLIO_SYNC_ENABLED: ${{ vars.FAMILY_PORTFOLIO_SYNC_ENABLED }}
-          FAMILY_PORTFOLIO_SYNC_HOUR: ${{ vars.FAMILY_PORTFOLIO_SYNC_HOUR }}
-          FAMILY_PORTFOLIO_SYNC_MINUTE: ${{ vars.FAMILY_PORTFOLIO_SYNC_MINUTE }}
-          FAMILY_PORTFOLIO_SYNC_TIMEZONE: ${{ vars.FAMILY_PORTFOLIO_SYNC_TIMEZONE }}
-          FAMILY_PORTFOLIO_BENCHMARK_SYMBOL: ${{ vars.FAMILY_PORTFOLIO_BENCHMARK_SYMBOL }}

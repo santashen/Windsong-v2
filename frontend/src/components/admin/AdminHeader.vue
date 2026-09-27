@@ -30,8 +30,7 @@ const authStore = useAuthStore()
 
 const pageTitle = computed(() => {
   const titles = {
-    '/admin/photos': 'Photos Management',
-    '/admin/family-portfolio': 'Family Portfolio'
+    '/admin/photos': 'Photos Management'
     // Add more titles here as you add more admin pages
   }
   return titles[route.path] || 'Admin'

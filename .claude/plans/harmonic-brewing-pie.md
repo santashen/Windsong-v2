@@ -12,7 +12,6 @@
 | `backend/database/database.go` | **修改** — 移除 AutoMigrate |
 | `docker-compose.yml` | **修改** — 添加 flyway 服务 |
 | `docker-compose.prod.yml` | **修改** — 添加 flyway 服务，更新 backend depends_on |
-| `docker-compose.test.yml` | **修改** — 添加 flyway 服务，更新 backend depends_on |
 | `.github/workflows/deploy.yml` | **修改** — 拉取 flyway 镜像，切换到 Compose V2 |
 
 ---
@@ -97,11 +96,7 @@ depends_on:
 
 > `service_completed_successfully` 确保 Flyway 运行完毕并成功退出后，backend 才启动。
 
-## Step 5: 添加 Flyway 到 docker-compose.test.yml（测试环境）
-
-同 Step 4 模式，添加 flyway 服务并更新 backend depends_on。使用硬编码凭据（windsong/windsong123），加入 `windsong-test` 网络。
-
-## Step 6: 更新 GitHub Actions
+## Step 5: 更新 GitHub Actions
 
 **修改** `.github/workflows/deploy.yml`
 

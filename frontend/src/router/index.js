@@ -4,16 +4,11 @@ import About from '@/views/About.vue'
 import Gallery from '@/views/Gallery.vue'
 import BlogList from '@/views/BlogList.vue'
 import BlogPost from '@/views/BlogPost.vue'
-import Services from '@/views/Services.vue'
-import ValuationBacktest from '@/views/ValuationBacktest.vue'
-import FamilyPortfolio from '@/views/FamilyPortfolio.vue'
-import HeatDissipationCalculator from '@/views/HeatDissipationCalculator.vue'
 
 // Admin views (lazy loaded)
 const AdminLayout = () => import('@/views/admin/AdminLayout.vue')
 const AdminLogin = () => import('@/views/admin/Login.vue')
 const AdminPhotos = () => import('@/views/admin/Photos.vue')
-const AdminFamilyPortfolio = () => import('@/views/admin/FamilyPortfolioAdmin.vue')
 
 const routes = [
   {
@@ -41,26 +36,6 @@ const routes = [
     name: 'About',
     component: About
   },
-  {
-    path: '/services',
-    name: 'Services',
-    component: Services
-  },
-  {
-    path: '/services/valuation-backtest',
-    name: 'ValuationBacktest',
-    component: ValuationBacktest
-  },
-  {
-    path: '/services/family-portfolio',
-    name: 'FamilyPortfolio',
-    component: FamilyPortfolio
-  },
-  {
-    path: '/services/heat-dissipation-calculator',
-    name: 'HeatDissipationCalculator',
-    component: HeatDissipationCalculator
-  },
   // Admin routes
   {
     path: '/admin/login',
@@ -82,11 +57,6 @@ const routes = [
         name: 'AdminPhotos',
         component: AdminPhotos
       },
-      {
-        path: 'family-portfolio',
-        name: 'AdminFamilyPortfolio',
-        component: AdminFamilyPortfolio
-      }
       // Future admin routes can be added here
     ]
   }
