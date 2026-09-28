@@ -78,6 +78,7 @@
     <PhotoAIImport
       :open="aiImportOpen"
       @close="aiImportOpen = false"
+      @imported="handleAIImported"
     />
 
     <!-- Delete confirmation dialog -->
@@ -195,6 +196,11 @@ function handleSaved() {
   closeDrawer()
   fetchPhotos()
   fetchFilterOptions() // Refresh filter options in case new locations/tags
+}
+
+function handleAIImported() {
+  fetchPhotos()
+  fetchFilterOptions()
 }
 
 // Delete handlers
