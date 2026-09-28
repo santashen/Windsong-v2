@@ -30,6 +30,7 @@ type PhotoServiceInterface interface {
 	GetFilterOptions() (*models.FilterOptions, error)
 	GetPhotoByID(id uint) (*models.Photo, error)
 	CreatePhoto(photo *models.Photo) error
+	FindExistingPhotoURLs(urls []string) (map[string]bool, error)
 	UpdatePhoto(id uint, photo *models.Photo) error
 	DeletePhoto(id uint) error
 }

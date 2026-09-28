@@ -88,6 +88,7 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 		adminPhotos.Use(middleware.AdminAuth(cfg.AdminAPIKey))
 		{
 			adminPhotos.POST("", photoHandler.CreatePhoto)
+			adminPhotos.POST("/batch", photoHandler.CreatePhotosBatch)
 			adminPhotos.PUT("/:id", photoHandler.UpdatePhoto)
 			adminPhotos.DELETE("/:id", photoHandler.DeletePhoto)
 		}

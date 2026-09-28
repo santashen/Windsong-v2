@@ -22,20 +22,22 @@ type PhotoMetadataImportRequest struct {
 
 // PhotoMetadataImportItem is one parsed photo draft returned by the Python service.
 type PhotoMetadataImportItem struct {
-	Index         int      `json:"index"`
-	Status        string   `json:"status"`
-	URL           string   `json:"url"`
-	Thumbnail     string   `json:"thumbnail"`
-	Title         string   `json:"title"`
-	Description   string   `json:"description"`
-	Date          string   `json:"date"`
-	Location      string   `json:"location"`
-	City          string   `json:"city"`
-	Country       string   `json:"country"`
-	Tags          []string `json:"tags"`
-	AspectRatio   string   `json:"aspectRatio"`
-	Warnings      []string `json:"warnings"`
-	MissingFields []string `json:"missingFields"`
+	Index            int      `json:"index"`
+	Status           string   `json:"status"`
+	URL              string   `json:"url"`
+	Thumbnail        string   `json:"thumbnail"`
+	Title            string   `json:"title"`
+	Description      string   `json:"description"`
+	Date             string   `json:"date"`
+	Location         string   `json:"location"`
+	City             string   `json:"city"`
+	Country          string   `json:"country"`
+	Tags             []string `json:"tags"`
+	AspectRatio      string   `json:"aspectRatio"`
+	Warnings         []string `json:"warnings"`
+	MissingFields    []string `json:"missingFields"`
+	Existing         bool     `json:"existing"`
+	DuplicateInBatch bool     `json:"duplicateInBatch"`
 }
 
 // PhotoMetadataImportResponse is the stable contract exposed by the Go API.

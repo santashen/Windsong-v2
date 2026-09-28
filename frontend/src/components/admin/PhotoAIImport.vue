@@ -68,7 +68,7 @@
               >
                 <div class="draft-card-header">
                   <label class="draft-select">
-                    <input v-model="draft.selected" type="checkbox" />
+                    <input v-model="draft.selected" type="checkbox" :disabled="draft.importStatus === 'submitting' || draft.importStatus === 'success'" />
                     <span>Photo {{ draft.index || index + 1 }}</span>
                   </label>
                   <button class="remove-btn" type="button" @click="removeDraft(index)">Remove</button>
@@ -121,6 +121,9 @@
                   <p v-for="warning in draft.warnings" :key="warning" class="notice">{{ warning }}</p>
                   <p v-if="draft.importError" class="notice error">{{ draft.importError }}</p>
                 </div>
+
+                <p v-if="isExistingDuplicate(draft)" class="notice warning duplicate-notice">This photo URL already exists in the gallery.</p>
+                <p v-else-if="isBatchDuplicate(draft)" class="notice warning duplicate-notice">This URL is repeated in this import batch.</p>
 
                 <p v-if="draft.importStatus === 'success'" class="import-success">Imported successfully</p>
                 <p v-else-if="draft.importStatus === 'duplicate'" class="import-duplicate">Already exists</p>
@@ -179,7 +182,10 @@ function normalizeDraft(item, index) {
     tagsText: Array.isArray(item.tags) ? item.tags.join(', ') : '',
     missingFields: item.missingFields || [],
     warnings: item.warnings || [],
-    selected: true,
+    originalURL: item.url || '',
+    existing: !!item.existing,
+    duplicateInBatch: !!item.duplicateInBatch,
+    selected: !item.existing && !item.duplicateInBatch,
     imageError: false,
     importStatus: 'idle',
     importError: ''
@@ -212,9 +218,25 @@ function removeDraft(index) {
 function draftValidation(draft) {
   const missing = []
   if (!draft.url?.trim()) missing.push('url')
+  else {
+    try {
+      const parsedURL = new URL(draft.url.trim())
+      if (!['http:', 'https:'].includes(parsedURL.protocol)) missing.push('url')
+    } catch {
+      missing.push('url')
+    }
+  }
   if (!draft.title?.trim()) missing.push('title')
   if (!draft.date) missing.push('date')
   return missing
+}
+
+function isExistingDuplicate(draft) {
+  return draft.existing && draft.url.trim() === draft.originalURL
+}
+
+function isBatchDuplicate(draft) {
+  return draft.duplicateInBatch && draft.url.trim() === draft.originalURL
 }
 
 function toPhotoPayload(draft) {
@@ -241,27 +263,37 @@ async function submitSelected() {
 
   isSubmitting.value = true
   summary.value = ''
+  selected.forEach(draft => {
+    draft.importStatus = 'submitting'
+    draft.importError = ''
+  })
+
   let succeeded = 0
   let duplicates = 0
   let failed = 0
-
-  for (const draft of selected) {
-    draft.importStatus = 'submitting'
-    draft.importError = ''
-    try {
-      await adminPhotoApi.createPhoto(toPhotoPayload(draft))
-      draft.importStatus = 'success'
-      succeeded += 1
-    } catch (error) {
-      if (error.response?.status === 409) {
+  try {
+    const response = await adminPhotoApi.createPhotosBatch(selected.map(toPhotoPayload))
+    const outcomes = response.data.items || []
+    selected.forEach((draft, index) => {
+      const outcome = outcomes[index]
+      if (outcome?.status === 'success') {
+        draft.importStatus = 'success'
+        succeeded += 1
+      } else if (outcome?.status === 'duplicate') {
         draft.importStatus = 'duplicate'
-        draft.importError = 'A photo with this URL already exists.'
+        draft.importError = outcome.message || 'A photo with this URL already exists.'
         duplicates += 1
       } else {
         draft.importStatus = 'failed'
-        draft.importError = error.message || 'Failed to import this photo.'
+        draft.importError = outcome?.message || 'Failed to import this photo.'
         failed += 1
       }
+    })
+  } catch (error) {
+    for (const draft of selected) {
+      draft.importStatus = 'failed'
+      draft.importError = error.response?.data?.message || error.message || 'Batch import failed. You can retry.'
+      failed += 1
     }
   }
 

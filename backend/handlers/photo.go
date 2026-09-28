@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 
 	"windsong/middleware"
 	"windsong/models"
@@ -50,7 +52,77 @@ func (h *PhotoHandler) PreviewAIImport(c *gin.Context) {
 		Error(c, http.StatusBadGateway, CodeExternalService, "Photo metadata parsing service is unavailable")
 		return
 	}
+	if len(result.Items) > 50 {
+		Error(c, http.StatusBadGateway, CodeExternalService, "Parsing returned too many photos; split the input into batches of 50 or fewer")
+		return
+	}
+	if len(result.Items) == 0 {
+		Error(c, http.StatusBadGateway, CodeExternalService, "No photo entries were found in the supplied notes")
+		return
+	}
+
+	urls := make([]string, 0, len(result.Items))
+	seen := make(map[string]bool)
+	for index := range result.Items {
+		item := &result.Items[index]
+		item.URL = strings.TrimSpace(item.URL)
+		item.Title = strings.TrimSpace(item.Title)
+		item.Date = strings.TrimSpace(item.Date)
+		if item.Tags == nil {
+			item.Tags = []string{}
+		}
+		item.MissingFields = validatePhotoDraft(item)
+		if len(item.MissingFields) > 0 {
+			item.Status = "needs_review"
+		}
+		if item.URL != "" {
+			parsedURL, parseErr := url.ParseRequestURI(item.URL)
+			if parseErr != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") || parsedURL.Host == "" {
+				item.Warnings = append(item.Warnings, "URL must be a valid http or https address")
+				item.MissingFields = append(item.MissingFields, "url")
+				item.Status = "needs_review"
+			} else {
+				urls = append(urls, item.URL)
+				if seen[item.URL] {
+					item.DuplicateInBatch = true
+					item.Warnings = append(item.Warnings, "This URL appears more than once in the parsed batch")
+				} else {
+					seen[item.URL] = true
+				}
+			}
+		}
+	}
+	existingURLs, err := h.photoService.FindExistingPhotoURLs(urls)
+	if err != nil {
+		middleware.GetLogger(c).Error().Err(err).Msg("failed to check existing photo URLs")
+		Error(c, http.StatusInternalServerError, CodeInternalError, "Failed to check existing photos")
+		return
+	}
+	for index := range result.Items {
+		item := &result.Items[index]
+		item.Existing = existingURLs[item.URL]
+		if item.Existing {
+			item.Warnings = append(item.Warnings, "A photo with this URL already exists")
+		}
+	}
 	Success(c, result)
+}
+
+func validatePhotoDraft(item *services.PhotoMetadataImportItem) []string {
+	missing := make([]string, 0, 3)
+	if item.URL == "" {
+		missing = append(missing, "url")
+	}
+	if item.Title == "" || len([]rune(item.Title)) > 200 {
+		missing = append(missing, "title")
+	}
+	if _, err := time.Parse("2006-01-02", item.Date); err != nil {
+		missing = append(missing, "date")
+	}
+	if len(missing) > 0 && len(item.Warnings) == 0 {
+		item.Warnings = append(item.Warnings, "Some required fields are missing or invalid; review this draft")
+	}
+	return missing
 }
 
 // GetPhotos godoc
@@ -141,6 +213,21 @@ type PhotoInput struct {
 	AspectRatio string   `json:"aspectRatio" binding:"omitempty,max=20"`
 }
 
+type PhotoBatchRequest struct {
+	Items []json.RawMessage `json:"items" binding:"required,min=1,max=50"`
+}
+
+type PhotoBatchItemResult struct {
+	Index   int    `json:"index"`
+	Status  string `json:"status"`
+	Message string `json:"message,omitempty"`
+	Photo   any    `json:"photo,omitempty"`
+}
+
+type PhotoBatchResponse struct {
+	Items []PhotoBatchItemResult `json:"items"`
+}
+
 // PhotoListQuery is the query parameter structure for listing photos
 type PhotoListQuery struct {
 	Page     int    `form:"page" binding:"omitempty,min=1"`
@@ -197,24 +284,7 @@ func (h *PhotoHandler) CreatePhoto(c *gin.Context) {
 		return
 	}
 
-	// Parse date (format already validated by binding tag)
-	date, _ := time.Parse("2006-01-02", input.Date)
-
-	// Convert tags to JSON string
-	tagsJSON, _ := json.Marshal(input.Tags)
-
-	photo := &models.Photo{
-		URL:         input.URL,
-		Thumbnail:   input.Thumbnail,
-		Title:       input.Title,
-		Description: input.Description,
-		Date:        date,
-		Location:    input.Location,
-		City:        input.City,
-		Country:     input.Country,
-		Tags:        string(tagsJSON),
-		AspectRatio: input.AspectRatio,
-	}
+	photo := photoFromInput(input)
 
 	if err := h.photoService.CreatePhoto(photo); err != nil {
 		if errors.Is(err, services.ErrPhotoURLExists) {
@@ -227,6 +297,57 @@ func (h *PhotoHandler) CreatePhoto(c *gin.Context) {
 	}
 
 	SuccessCreated(c, photo)
+}
+
+// CreatePhotosBatch creates selected photo drafts and returns an outcome per item.
+func (h *PhotoHandler) CreatePhotosBatch(c *gin.Context) {
+	var request PhotoBatchRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		ValidationError(c, err)
+		return
+	}
+	results := make([]PhotoBatchItemResult, 0, len(request.Items))
+	for index, raw := range request.Items {
+		var input PhotoInput
+		if err := json.Unmarshal(raw, &input); err != nil {
+			results = append(results, PhotoBatchItemResult{Index: index + 1, Status: "failed", Message: "Invalid photo data"})
+			continue
+		}
+		if err := binding.Validator.ValidateStruct(&input); err != nil {
+			results = append(results, PhotoBatchItemResult{Index: index + 1, Status: "failed", Message: "Required fields or field formats are invalid"})
+			continue
+		}
+
+		photo := photoFromInput(input)
+		if err := h.photoService.CreatePhoto(photo); err != nil {
+			if errors.Is(err, services.ErrPhotoURLExists) {
+				results = append(results, PhotoBatchItemResult{Index: index + 1, Status: "duplicate", Message: "Photo with this URL already exists"})
+				continue
+			}
+			middleware.GetLogger(c).Error().Err(err).Int("item_index", index+1).Msg("failed to create photo in batch")
+			results = append(results, PhotoBatchItemResult{Index: index + 1, Status: "failed", Message: "Failed to create photo"})
+			continue
+		}
+		results = append(results, PhotoBatchItemResult{Index: index + 1, Status: "success", Photo: photo})
+	}
+	Success(c, PhotoBatchResponse{Items: results})
+}
+
+func photoFromInput(input PhotoInput) *models.Photo {
+	date, _ := time.Parse("2006-01-02", input.Date)
+	tagsJSON, _ := json.Marshal(input.Tags)
+	return &models.Photo{
+		URL:         input.URL,
+		Thumbnail:   input.Thumbnail,
+		Title:       input.Title,
+		Description: input.Description,
+		Date:        date,
+		Location:    input.Location,
+		City:        input.City,
+		Country:     input.Country,
+		Tags:        string(tagsJSON),
+		AspectRatio: input.AspectRatio,
+	}
 }
 
 // UpdatePhoto godoc

@@ -248,6 +248,22 @@ func (s *PhotoService) CreatePhoto(photo *models.Photo) error {
 	return s.db.Create(photo).Error
 }
 
+// FindExistingPhotoURLs returns the URLs that already exist in the gallery.
+func (s *PhotoService) FindExistingPhotoURLs(urls []string) (map[string]bool, error) {
+	existing := make(map[string]bool)
+	if len(urls) == 0 {
+		return existing, nil
+	}
+	var matches []string
+	if err := s.db.Model(&models.Photo{}).Where("url IN ?", urls).Pluck("url", &matches).Error; err != nil {
+		return nil, err
+	}
+	for _, url := range matches {
+		existing[url] = true
+	}
+	return existing, nil
+}
+
 // UpdatePhoto updates an existing photo
 func (s *PhotoService) UpdatePhoto(id uint, photo *models.Photo) error {
 	photo.ID = id
