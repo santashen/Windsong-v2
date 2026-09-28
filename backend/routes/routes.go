@@ -48,7 +48,8 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 	})
 
 	// Initialize handlers
-	photoHandler := handlers.NewPhotoHandler(photoService)
+	photoMetadataService := services.NewPythonServiceClient(cfg.PythonServiceURL, cfg.PythonServiceTimeout)
+	photoHandler := handlers.NewPhotoHandler(photoService, photoMetadataService)
 	postHandler := handlers.NewPostHandler(postService)
 	rssHandler := handlers.NewRSSHandler(rssService)
 
@@ -87,8 +88,16 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 		adminPhotos.Use(middleware.AdminAuth(cfg.AdminAPIKey))
 		{
 			adminPhotos.POST("", photoHandler.CreatePhoto)
+			adminPhotos.POST("/batch", photoHandler.CreatePhotosBatch)
 			adminPhotos.PUT("/:id", photoHandler.UpdatePhoto)
 			adminPhotos.DELETE("/:id", photoHandler.DeletePhoto)
+		}
+
+		// AI photo import preview - protected and never writes to the database.
+		adminPhotoMetadata := v1.Group("/photos/ai-import")
+		adminPhotoMetadata.Use(middleware.AdminAuth(cfg.AdminAPIKey))
+		{
+			adminPhotoMetadata.POST("/preview", photoHandler.PreviewAIImport)
 		}
 
 		// Post routes - Public (read-only)

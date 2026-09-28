@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"errors"
 	"math"
 	"strings"
 	"time"
@@ -11,6 +12,9 @@ import (
 	"windsong/logger"
 	"windsong/models"
 )
+
+// ErrPhotoURLExists indicates that a photo with the same URL already exists.
+var ErrPhotoURLExists = errors.New("photo URL already exists")
 
 // PhotoService handles photo business logic
 type PhotoService struct {
@@ -235,7 +239,29 @@ func ParseTags(tagsStr string) []string {
 
 // CreatePhoto creates a new photo
 func (s *PhotoService) CreatePhoto(photo *models.Photo) error {
+	var existing models.Photo
+	if err := s.db.Where("url = ?", photo.URL).First(&existing).Error; err == nil {
+		return ErrPhotoURLExists
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
 	return s.db.Create(photo).Error
+}
+
+// FindExistingPhotoURLs returns the URLs that already exist in the gallery.
+func (s *PhotoService) FindExistingPhotoURLs(urls []string) (map[string]bool, error) {
+	existing := make(map[string]bool)
+	if len(urls) == 0 {
+		return existing, nil
+	}
+	var matches []string
+	if err := s.db.Model(&models.Photo{}).Where("url IN ?", urls).Pluck("url", &matches).Error; err != nil {
+		return nil, err
+	}
+	for _, url := range matches {
+		existing[url] = true
+	}
+	return existing, nil
 }
 
 // UpdatePhoto updates an existing photo

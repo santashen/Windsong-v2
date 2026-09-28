@@ -1,11 +1,12 @@
 # Windsong Blog
 
-一个基于 Go + Vue 3 + PostgreSQL 的个人博客系统，支持 Docker 容器化部署和 GitHub Actions 自动化 CI/CD。
+一个基于 Go、Python、Vue 3 和 PostgreSQL 的个人博客系统，支持 Docker 容器化部署和 GitHub Actions 自动化 CI/CD。
 
 ## 功能特性
 
 - 博客系统 - 基于 Git 仓库同步的 Markdown 文章，支持 LaTeX 公式渲染和 RSS 全文订阅
 - 相册管理 - 照片展览与后台管理
+- AI 批量照片导入 - 将自然语言照片记录解析成可编辑草稿并批量创建
 - 管理后台 - API Key 认证的后台管理系统
 
 ## 项目结构
@@ -33,6 +34,7 @@ Windsong-v2/
 │   ├── nginx.conf        # 容器内 Nginx 配置
 │   └── Dockerfile
 ├── db/migrations/        # Flyway 数据库迁移
+├── python/               # Python 内部能力服务
 ├── nginx/                # 主 Nginx 反向代理配置
 ├── scripts/              # 部署脚本
 ├── .github/workflows/    # GitHub Actions CI/CD
@@ -69,7 +71,16 @@ Windsong-v2/
 ./scripts/start-local.sh
 ```
 
-脚本会启动 PostgreSQL、执行 Flyway 迁移，并同时启动 Go 后端和 Vue 前端。按 `Ctrl+C` 只会停止前后端进程，数据库容器会继续运行。
+先在 Conda 环境安装 Python 项目：
+
+```bash
+conda activate windsong
+cd python
+python -m pip install -e '.[dev]'
+cd ..
+```
+
+脚本会启动 PostgreSQL、执行 Flyway 迁移，并同时启动 Python、Go 后端和 Vue 前端。按 `Ctrl+C` 会停止应用进程，数据库容器会继续运行。
 
 ### 1. 启动数据库
 
@@ -109,6 +120,8 @@ npm run dev           # http://localhost:5173
 | GET | `/api/photos/:id` | 获取单张照片 |
 | GET | `/api/photos/filters` | 获取筛选选项 |
 | POST/PUT/DELETE | `/api/photos` | 照片管理 (管理员) |
+| POST | `/api/photos/ai-import/preview` | 解析非结构化照片记录，返回可审核草稿 (管理员) |
+| POST | `/api/photos/batch` | 批量创建照片 (管理员) |
 
 ## 生产部署
 
@@ -143,8 +156,8 @@ npm run dev           # http://localhost:5173
 ### 自动部署（GitHub Actions）
 
 推送到 `develop` 分支自动触发部署流程：
-1. 构建 backend、frontend Docker 镜像
-2. 推送镜像到 ghcr.io/santashen/
+1. 按代码变更构建 backend、frontend、Python Docker 镜像
+2. 推送镜像到腾讯云容器镜像仓库
 3. SSH 到服务器拉取最新镜像并重启服务
 
 首次部署需要在 GitHub 仓库配置以下 Secrets：
@@ -165,6 +178,8 @@ RSS 元数据可在 GitHub 仓库的 Actions Variables 中配置；未配置时�
 | `RSS_DESCRIPTION` | Feed 描述 | `Windsong Blog RSS Feed` |
 | `RSS_AUTHOR` | 作者邮箱，可留空 | 空 |
 | `RSS_MAX_ITEMS` | Feed 最大文章数，范围 1–100 | `20` |
+
+照片解析还需要在 GitHub Actions 中配置 `LLM_API_URL`、`LLM_MODEL` Variables 和 `LLM_API_KEY` Secret。生产环境模板见 `.env.prod.example`。
 
 部署完成后可通过 `https://v2.windsong.top/rss.xml` 订阅。Feed 仅包含已发布文章，并支持 `ETag`、`Last-Modified` 和条件请求缓存。
 

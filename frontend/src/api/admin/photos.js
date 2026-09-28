@@ -32,6 +32,20 @@ export const adminPhotoApi = {
     })
   },
 
+  createPhotosBatch(items) {
+    return api.post('/photos/batch', { items }, {
+      headers: getAuthHeaders()
+    })
+  },
+
+  // Parse unstructured photo notes into editable drafts without creating photos
+  previewAIImport(content) {
+    return api.post('/photos/ai-import/preview', { content }, {
+      headers: getAuthHeaders(),
+      timeout: 180000
+    })
+  },
+
   // Update photo
   updatePhoto(id, data) {
     return api.put(`/photos/${id}`, data, {

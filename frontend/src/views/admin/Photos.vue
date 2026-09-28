@@ -9,6 +9,9 @@
         <PlusIcon />
         Add Photo
       </button>
+      <button class="ai-import-btn" @click="aiImportOpen = true">
+        AI Batch Import
+      </button>
     </div>
 
     <!-- Filters -->
@@ -71,6 +74,13 @@
       @saved="handleSaved"
     />
 
+    <!-- AI batch import preview -->
+    <PhotoAIImport
+      :open="aiImportOpen"
+      @close="aiImportOpen = false"
+      @imported="handleAIImported"
+    />
+
     <!-- Delete confirmation dialog -->
     <ConfirmDialog
       :open="deleteDialogOpen"
@@ -87,6 +97,7 @@ import { ref, onMounted } from 'vue'
 import { adminPhotoApi } from '@/api/admin/photos'
 import PhotoTable from '@/components/admin/PhotoTable.vue'
 import PhotoDrawer from '@/components/admin/PhotoDrawer.vue'
+import PhotoAIImport from '@/components/admin/PhotoAIImport.vue'
 import ConfirmDialog from '@/components/admin/ConfirmDialog.vue'
 import { PlusIcon, ChevronLeftIcon, ChevronRightIcon } from '@/components/icons'
 
@@ -104,6 +115,7 @@ const selectedLocation = ref(null)
 // Drawer state
 const drawerOpen = ref(false)
 const selectedPhoto = ref(null)
+const aiImportOpen = ref(false)
 
 // Delete dialog state
 const deleteDialogOpen = ref(false)
@@ -186,6 +198,11 @@ function handleSaved() {
   fetchFilterOptions() // Refresh filter options in case new locations/tags
 }
 
+function handleAIImported() {
+  fetchPhotos()
+  fetchFilterOptions()
+}
+
 // Delete handlers
 function confirmDelete(photo) {
   photoToDelete.value = photo
@@ -247,6 +264,24 @@ onMounted(() => {
 
 .add-btn:hover {
   background: var(--color-primary-hover);
+}
+
+.ai-import-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border: 1px solid var(--color-primary);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-primary);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.ai-import-btn:hover {
+  background: var(--color-primary);
+  color: white;
 }
 
 .filters-bar {

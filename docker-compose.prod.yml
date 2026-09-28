@@ -39,6 +39,27 @@ services:
     networks:
       - windsong-network
 
+  # Python capability services (internal only)
+  python:
+    image: ccr.ccs.tencentyun.com/windsong/python:latest
+    build:
+      context: ./python
+      dockerfile: Dockerfile
+    container_name: windsong-python
+    restart: always
+    environment:
+      LLM_API_URL: ${LLM_API_URL}
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_MODEL: ${LLM_MODEL}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-150}
+    networks:
+      - windsong-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # Go 后端 API
   backend:
     image: ccr.ccs.tencentyun.com/windsong/backend:latest
@@ -49,6 +70,8 @@ services:
       DATABASE_URL: host=postgres user=${DB_USER:-windsong} password=${DB_PASSWORD} dbname=${DB_NAME:-windsong} port=5432 sslmode=disable
       ENV: production
       ADMIN_API_KEY: ${ADMIN_API_KEY}
+      PYTHON_SERVICE_URL: http://python:8000
+      PYTHON_SERVICE_TIMEOUT_SECONDS: ${PYTHON_SERVICE_TIMEOUT_SECONDS:-160}
       POSTS_REPO_URL: ${POSTS_REPO_URL}
       POSTS_DIR: /root/data/posts
       SITE_URL: ${SITE_URL:-https://v2.windsong.top}
@@ -63,6 +86,8 @@ services:
         condition: service_healthy
       flyway:
         condition: service_completed_successfully
+      python:
+        condition: service_healthy
     networks:
       - windsong-network
     healthcheck:
