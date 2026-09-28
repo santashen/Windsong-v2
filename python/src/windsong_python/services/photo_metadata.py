@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 from typing import Any
 
@@ -7,6 +8,8 @@ from fastapi import HTTPException
 
 from windsong_python.config import Settings, settings
 from windsong_python.models.photo_metadata import ParseResponse
+
+logger = logging.getLogger(__name__)
 
 
 def extract_json(text: str) -> dict[str, Any]:
@@ -65,7 +68,19 @@ class PhotoMetadataService:
                 response.raise_for_status()
                 body = response.json()
                 text = body["choices"][0]["message"]["content"]
-        except (httpx.HTTPError, KeyError, IndexError, TypeError) as exc:
-            raise HTTPException(status_code=502, detail="LLM request failed") from exc
+        except httpx.HTTPStatusError as exc:
+            upstream_body = exc.response.text[:1000].replace("\n", " ")
+            logger.error(
+                "LLM upstream returned an error: status=%s body=%s",
+                exc.response.status_code,
+                upstream_body,
+            )
+            raise HTTPException(status_code=502, detail="LLM upstream request failed") from exc
+        except httpx.RequestError as exc:
+            logger.error("LLM request could not be completed: %s", exc)
+            raise HTTPException(status_code=502, detail="LLM request could not be completed") from exc
+        except (KeyError, IndexError, TypeError, ValueError) as exc:
+            logger.error("LLM returned an unexpected response: %s", exc)
+            raise HTTPException(status_code=502, detail="LLM returned an unexpected response") from exc
 
         return ParseResponse.model_validate(extract_json(text))

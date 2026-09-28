@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -71,7 +72,8 @@ func (c *PythonServiceClient) ParsePhotoMetadata(ctx context.Context, request Ph
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("Python service returned status %d", resp.StatusCode)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
+		return nil, fmt.Errorf("Python service returned status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	var result PhotoMetadataImportResponse

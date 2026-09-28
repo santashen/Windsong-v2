@@ -25,6 +25,7 @@ const (
 	CodeNotFound        = 40400
 	CodeInternalError   = 50000
 	CodeExternalService = 50200
+	CodeConflict        = 40900
 )
 
 // Success sends a 200 response with data.

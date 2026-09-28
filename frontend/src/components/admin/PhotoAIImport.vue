@@ -123,6 +123,7 @@
                 </div>
 
                 <p v-if="draft.importStatus === 'success'" class="import-success">Imported successfully</p>
+                <p v-else-if="draft.importStatus === 'duplicate'" class="import-duplicate">Already exists</p>
                 <p v-else-if="draft.importStatus === 'submitting'" class="import-progress">Importing...</p>
               </article>
             </section>
@@ -237,6 +238,7 @@ async function submitSelected() {
   isSubmitting.value = true
   summary.value = ''
   let succeeded = 0
+  let duplicates = 0
   let failed = 0
 
   for (const draft of selected) {
@@ -247,15 +249,21 @@ async function submitSelected() {
       draft.importStatus = 'success'
       succeeded += 1
     } catch (error) {
-      draft.importStatus = 'failed'
-      draft.importError = error.message || 'Failed to import this photo.'
-      failed += 1
+      if (error.response?.status === 409) {
+        draft.importStatus = 'duplicate'
+        draft.importError = 'A photo with this URL already exists.'
+        duplicates += 1
+      } else {
+        draft.importStatus = 'failed'
+        draft.importError = error.message || 'Failed to import this photo.'
+        failed += 1
+      }
     }
   }
 
   isSubmitting.value = false
-  summary.value = `${succeeded} succeeded${failed ? `, ${failed} failed` : ''}`
-  if (succeeded) emit('imported', { succeeded, failed })
+  summary.value = `${succeeded} succeeded${duplicates ? `, ${duplicates} duplicate` : ''}${failed ? `, ${failed} failed` : ''}`
+  if (succeeded) emit('imported', { succeeded, duplicates, failed })
 }
 
 watch(() => props.open, (open) => {
@@ -430,6 +438,13 @@ watch(() => props.open, (open) => {
   margin: 0.85rem 0 0;
   color: var(--color-primary);
   font-size: 0.85rem;
+}
+
+.import-duplicate {
+  margin: 0.85rem 0 0;
+  color: #a16207;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .drafts-section {

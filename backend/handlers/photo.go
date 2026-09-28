@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -211,6 +212,10 @@ func (h *PhotoHandler) CreatePhoto(c *gin.Context) {
 	}
 
 	if err := h.photoService.CreatePhoto(photo); err != nil {
+		if errors.Is(err, services.ErrPhotoURLExists) {
+			Error(c, http.StatusConflict, CodeConflict, "Photo with this URL already exists")
+			return
+		}
 		middleware.GetLogger(c).Error().Err(err).Msg("failed to create photo")
 		Error(c, http.StatusInternalServerError, CodeInternalError, "Failed to create photo")
 		return
