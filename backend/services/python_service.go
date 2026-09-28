@@ -4,12 +4,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
 )
+
+var ErrPythonServiceTimeout = errors.New("Python service request timed out")
 
 // PhotoMetadataImportRequest is the raw text submitted by the administrator.
 type PhotoMetadataImportRequest struct {
@@ -68,11 +72,18 @@ func (c *PythonServiceClient) ParsePhotoMetadata(ctx context.Context, request Ph
 
 	resp, err := c.client.Do(req)
 	if err != nil {
+		var networkError net.Error
+		if errors.Is(err, context.DeadlineExceeded) || (errors.As(err, &networkError) && networkError.Timeout()) {
+			return nil, fmt.Errorf("%w: %v", ErrPythonServiceTimeout, err)
+		}
 		return nil, fmt.Errorf("call Python service: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
+		if resp.StatusCode == http.StatusGatewayTimeout {
+			return nil, fmt.Errorf("%w: %s", ErrPythonServiceTimeout, strings.TrimSpace(string(body)))
+		}
 		return nil, fmt.Errorf("Python service returned status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 

@@ -78,6 +78,8 @@ class PhotoMetadataService:
             raise HTTPException(status_code=502, detail="LLM upstream request failed") from exc
         except httpx.RequestError as exc:
             logger.error("LLM request could not be completed: %s", exc)
+            if isinstance(exc, httpx.TimeoutException):
+                raise HTTPException(status_code=504, detail="LLM request timed out") from exc
             raise HTTPException(status_code=502, detail="LLM request could not be completed") from exc
         except (KeyError, IndexError, TypeError, ValueError) as exc:
             logger.error("LLM returned an unexpected response: %s", exc)

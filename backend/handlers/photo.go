@@ -41,6 +41,11 @@ func (h *PhotoHandler) PreviewAIImport(c *gin.Context) {
 
 	result, err := h.photoMetadataService.ParsePhotoMetadata(c.Request.Context(), input)
 	if err != nil {
+		if errors.Is(err, services.ErrPythonServiceTimeout) {
+			middleware.GetLogger(c).Warn().Err(err).Msg("photo metadata parsing timed out")
+			Error(c, http.StatusGatewayTimeout, CodeExternalService, "Photo metadata parsing timed out; please try again")
+			return
+		}
 		middleware.GetLogger(c).Error().Err(err).Msg("failed to parse photo metadata")
 		Error(c, http.StatusBadGateway, CodeExternalService, "Photo metadata parsing service is unavailable")
 		return

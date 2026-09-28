@@ -42,7 +42,7 @@ func Load() *Config {
 		RSSAuthor:            getEnv("RSS_AUTHOR", ""),
 		RSSMaxItems:          getEnvInt("RSS_MAX_ITEMS", 20),
 		PythonServiceURL:     getEnv("PYTHON_SERVICE_URL", "http://localhost:8000"),
-		PythonServiceTimeout: getEnvInt("PYTHON_SERVICE_TIMEOUT_SECONDS", 120),
+		PythonServiceTimeout: getEnvInt("PYTHON_SERVICE_TIMEOUT_SECONDS", 160),
 	}
 }
 

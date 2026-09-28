@@ -195,7 +195,11 @@ async function parseContent() {
     drafts.value = (response.data.items || []).map(normalizeDraft)
     summary.value = ''
   } catch (error) {
-    errorMessage.value = error.message || 'Failed to parse photo notes. Please try again.'
+    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+      errorMessage.value = 'Parsing took too long. Please try again or split the notes into smaller batches.'
+    } else {
+      errorMessage.value = error.response?.data?.message || error.response?.data?.detail || error.message || 'Failed to parse photo notes. Please try again.'
+    }
   } finally {
     isParsing.value = false
   }
